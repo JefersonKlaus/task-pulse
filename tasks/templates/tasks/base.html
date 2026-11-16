@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}Task Pulse{% endblock %}</title>
+    <style>
+        :root { color-scheme: light; font-family: system-ui, sans-serif; color: #172033; background: #f4f6fb; }
+        body { margin: 0; }
+        header { padding: 22px 8%; background: #172033; color: white; }
+        main { max-width: 960px; margin: 36px auto; padding: 0 20px; }
+        a { color: #335eea; text-decoration: none; }
+        .topbar, .card-header, .task { display: flex; justify-content: space-between; align-items: center; gap: 16px; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; }
+        .card, form { background: white; border: 1px solid #e1e5ef; border-radius: 12px; padding: 22px; box-shadow: 0 3px 12px #1720330b; }
+        .task { padding: 16px 0; border-bottom: 1px solid #e8ebf2; }
+        .task:last-child { border-bottom: 0; }
+        label { display: block; font-weight: 600; margin: 14px 0 6px; }
+        input, select { box-sizing: border-box; width: 100%; padding: 10px 12px; border: 1px solid #cbd2e0; border-radius: 7px; }
+        button, .button { display: inline-block; border: 0; border-radius: 7px; padding: 11px 16px; background: #335eea; color: white; cursor: pointer; font-weight: 600; }
+        .muted, .errorlist { color: #667085; }
+        .errorlist { padding-left: 18px; color: #b42318; }
+    </style>
+</head>
+<body>
+    <header><strong>Task Pulse</strong></header>
+    <main>{% block content %}{% endblock %}</main>
+</body>
+</html>
