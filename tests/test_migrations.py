@@ -1,30 +1,29 @@
-from django.db.migrations.executor import MigrationExecutor
-from django.db import connection
-from django.test import TransactionTestCase
+from io import StringIO
+
+from django.core.management import call_command
+from django.test import TestCase
+
+from src.models import Project, Task
 
 
-class MigrationTests(TransactionTestCase):
-    reset_sequences = True
+class MigrationTests(TestCase):
+    def test_models_have_no_changes_missing_a_migration(self):
+        try:
+            call_command(
+                "makemigrations",
+                "tasks",
+                "--check",
+                "--dry-run",
+                stdout=StringIO(),
+                stderr=StringIO(),
+            )
+        except SystemExit:
+            self.fail("Model changes detected: run `python manage.py makemigrations`.")
 
-    def test_latest_migration_is_applied(self):
-        executor = MigrationExecutor(connection)
-        plan = executor.migration_plan(
-            executor.loader.graph.leaf_nodes()
+    def test_table_names_stay_the_same(self):
+        # The app is the "src" package but keeps the label "tasks", so
+        # databases created before the code moved keep working.
+        self.assertEqual(
+            (Project._meta.db_table, Task._meta.db_table),
+            ("tasks_project", "tasks_task"),
         )
-        self.assertEqual(plan, [])
-
-    def test_tasks_app_has_initial_migration(self):
-        executor = MigrationExecutor(connection)
-        self.assertIn(
-            ("tasks", "0001_initial"),
-            executor.loader.graph.nodes,
-        )
-
-    def test_migration_creates_expected_models(self):
-        executor = MigrationExecutor(connection)
-        state = executor.loader.project_state(
-            executor.loader.graph.leaf_nodes()
-        )
-        self.assertIn(("tasks", "repository"), state.models)
-        self.assertIn(("tasks", "project"), state.models)
-        self.assertIn(("tasks", "task"), state.models)

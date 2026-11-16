@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}Task Pulse{% endblock %}</title>
+    <style>
+        :root { color-scheme: light; font-family: system-ui, sans-serif; color: #172033; background: #f4f6fb; }
+        body { margin: 0; }
+        .layout { display: flex; align-items: flex-start; min-height: 100vh; }
+        .sidebar { flex: 0 0 220px; box-sizing: border-box; min-height: 100vh; position: sticky; top: 0; display: flex; flex-direction: column; gap: 28px; padding: 28px 20px; background: #172033; color: white; }
+        .sidebar .brand { font-size: 1.05em; }
+        .sidebar nav { display: flex; flex-direction: column; gap: 4px; }
+        .sidebar nav a { color: #cbd5f5; padding: 10px 12px; border-radius: 8px; }
+        .sidebar nav a:hover { background: #ffffff14; color: white; }
+        .sidebar nav a.active { background: #335eea; color: white; }
+        .content { flex: 1; min-width: 0; }
+        main { max-width: 960px; margin: 36px auto; padding: 0 20px; }
+        @media (max-width: 720px) {
+            .layout { flex-direction: column; }
+            .sidebar { position: static; min-height: auto; flex: 0 0 auto; width: 100%; }
+            .sidebar nav { flex-direction: row; flex-wrap: wrap; }
+        }
+        a { color: #335eea; text-decoration: none; }
+        .topbar, .task { display: flex; justify-content: space-between; align-items: center; gap: 16px; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; }
+        .card, form { background: white; border: 1px solid #e1e5ef; border-radius: 12px; padding: 22px; box-shadow: 0 3px 12px #1720330b; }
+        .task { padding: 16px 0; border-bottom: 1px solid #e8ebf2; }
+        .task:last-child { border-bottom: 0; }
+        label { display: block; font-weight: 600; margin: 14px 0 6px; }
+        input, select, textarea { box-sizing: border-box; width: 100%; padding: 10px 12px; border: 1px solid #cbd2e0; border-radius: 7px; }
+        button, .button { display: inline-block; border: 0; border-radius: 7px; padding: 11px 16px; background: #335eea; color: white; cursor: pointer; font-weight: 600; }
+        .muted, .errorlist { color: #667085; }
+        .errorlist { padding-left: 18px; color: #b42318; }
+        .helptext { display: block; margin-top: 4px; font-size: .9em; color: #667085; }
+        .status { display: inline-block; margin-left: 8px; padding: 2px 8px; border-radius: 999px; background: #e8ebf2; font-size: .8em; }
+        .task p { margin: 6px 0 0; }
+        summary.button { list-style: none; }
+        summary.button::-webkit-details-marker { display: none; }
+        .new-task form { margin: 16px 0; }
+        input[type="checkbox"] { width: auto; margin: 0 6px 0 0; }
+        fieldset.statuses { grid-column: 1 / -1; border: 0; margin: 14px 0 0; padding: 0; }
+        fieldset.statuses legend { font-weight: 600; padding: 0; margin-bottom: 6px; }
+        fieldset.statuses label { display: inline-flex; align-items: center; font-weight: 400; margin: 0 18px 0 0; }
+        input:disabled { background: #f4f6fb; color: #98a2b3; }
+        form.add-time { display: flex; gap: 6px; align-items: center; margin: 0; padding: 0; border: 0; box-shadow: none; background: none; }
+        form.add-time input { width: 6.5em; padding: 6px 8px; }
+        form.add-time button { padding: 6px 10px; }
+        .task-side { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; white-space: nowrap; }
+        .messages { list-style: none; padding: 0; margin: 0 0 20px; }
+        .messages li { padding: 12px 16px; border-radius: 8px; background: #ecfdf3; color: #05603a; }
+        .messages li.error { background: #fef3f2; color: #b42318; }
+        .filters { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 0 16px; align-items: end; }
+        .filters .actions { padding-top: 14px; }
+        .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin: 20px 0; }
+        .stat .value { display: block; font-size: 1.6em; font-weight: 700; margin-top: 6px; }
+        .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px; }
+        .chip { padding: 6px 12px; border-radius: 999px; background: white; border: 1px solid #e1e5ef; }
+        table.tasks { width: 100%; border-collapse: collapse; }
+        table.tasks th, table.tasks td { padding: 10px 8px; border-bottom: 1px solid #e8ebf2; text-align: left; vertical-align: top; }
+        table.tasks td.number, table.tasks th.number { text-align: right; white-space: nowrap; }
+        table.tasks tfoot td { font-weight: 700; border-bottom: 0; }
+        .warning { padding: 12px 16px; border-radius: 8px; background: #fffaeb; color: #93370d; }
+        pre.sample { background: #f4f6fb; padding: 12px; border-radius: 8px; overflow-x: auto; }
+        select { background: white; }
+    </style>
+</head>
+<body>
+    <div class="layout">
+        <aside class="sidebar">
+            <strong class="brand">Task Pulse</strong>
+            <nav>
+                <a href="{% url 'tasks:dashboard' %}"{% if request.resolver_match.url_name == "dashboard" %} class="active"{% endif %}>Painel</a>
+                <a href="{% url 'tasks:project_list' %}"{% if request.resolver_match.url_name == "project_list" %} class="active"{% endif %}>Projetos</a>
+                <a href="{% url 'tasks:task_import' %}"{% if request.resolver_match.url_name == "task_import" %} class="active"{% endif %}>Importar tarefas</a>
+            </nav>
+        </aside>
+        <div class="content">
+            <main>
+                {% if messages %}
+                <ul class="messages">
+                    {% for message in messages %}<li class="{{ message.tags }}">{{ message }}</li>{% endfor %}
+                </ul>
+                {% endif %}
+                {% block content %}{% endblock %}
+            </main>
+        </div>
+    </div>
+</body>
+</html>

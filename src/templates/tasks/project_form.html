@@ -1,0 +1,18 @@
+{% extends "tasks/base.html" %}
+{% block title %}{% if project %}Editar {{ project.name }}{% else %}Novo projeto{% endif %} | Task Pulse{% endblock %}
+{% block content %}
+<h1>{% if project %}Editar projeto{% else %}Novo projeto{% endif %}</h1>
+<p class="muted">Informe a URL do repositório git. O nome é opcional.</p>
+<form method="post">
+    {% csrf_token %}
+    {{ form.non_field_errors }}
+    {% for field in form %}
+        {% include "tasks/_field.html" %}
+    {% endfor %}
+    {% if project %}
+    <p><button type="submit">Salvar projeto</button> <a href="{% url 'tasks:project_detail' project.pk %}">Cancelar</a></p>
+    {% else %}
+    <p><button type="submit">Criar projeto</button> <a href="{% url 'tasks:project_list' %}">Cancelar</a></p>
+    {% endif %}
+</form>
+{% endblock %}
