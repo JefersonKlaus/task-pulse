@@ -1,53 +1,55 @@
 {% extends "tasks/base.html" %}
 {% load task_time %}
+{% load i18n %}
 {% block title %}{{ project.name }} | Task Pulse{% endblock %}
 {% block content %}
-<p><a href="{% url 'tasks:project_list' %}">← Projetos</a></p>
+<p><a href="{% url 'tasks:project_list' %}">← {% translate "Projetos" %}</a></p>
 <div class="topbar">
     <div>
         <h1>{{ project.name }}</h1>
+        {% if project.provider %}<p><a class="provider-tag" href="{% url 'tasks:project_list' %}?empresa={{ project.provider_id }}">{{ project.provider.name }}</a></p>{% endif %}
         <p class="muted">{% if project.web_url %}<a href="{{ project.web_url }}" rel="noopener noreferrer">{{ project.url }}</a>{% else %}{{ project.url }}{% endif %}</p>
         {% if project.description %}<p>{{ project.description|linebreaksbr }}</p>{% endif %}
     </div>
-    <div>
-        <a class="button" href="{% url 'tasks:task_import' %}?projeto={{ project.pk }}">Importar tarefas</a>
-        <a class="button" href="{% url 'tasks:project_update' project.pk %}">Editar projeto</a>
+    <div class="topbar-actions">
+        <a class="button" href="{% url 'tasks:task_import' %}?projeto={{ project.pk }}">{% translate "Importar tarefas" %}</a>
+        <a class="button" href="{% url 'tasks:project_update' project.pk %}">{% translate "Editar projeto" %}</a>
     </div>
 </div>
 <div class="card">
-    <h2>Tarefas</h2>
+    <h2>{% translate "Tarefas" %}</h2>
     {# Closed until "Nova tarefa" is pressed; reopened to show errors. #}
     <details class="new-task"{% if task_form.is_bound %} open{% endif %}>
-        <summary class="button">Nova tarefa</summary>
+        <summary class="button">{% translate "Nova tarefa" %}</summary>
         <form method="post">
             {% csrf_token %}
             {{ task_form.non_field_errors }}
             {% for field in task_form %}
                 {% include "tasks/_field.html" %}
             {% endfor %}
-            <p class="muted">A tarefa começa como Doing, com início hoje.</p>
-            <p><button type="submit">Criar tarefa</button></p>
+            <p class="muted">{% translate "A tarefa começa como Doing, com início hoje." %}</p>
+            <p class="form-actions"><button type="submit">{% translate "Criar tarefa" %}</button></p>
         </form>
     </details>
     {% for task in project.tasks.all %}
     <div class="task">
         <div>
             {% if task.external_id %}<span class="muted">#{{ task.external_id }}</span> {% endif %}<strong>{{ task.name }}</strong><span class="status">{{ task.get_status_display }}</span>
-            <div class="muted">Início: {{ task.started_on|date:"d/m/Y" }}{% if task.finished_on %} · Término: {{ task.finished_on|date:"d/m/Y" }}{% endif %}</div>
-            {% if task.description %}<p><em>Objetivos:</em> {{ task.description|linebreaksbr }}</p>{% endif %}
-            {% if task.acceptance_criteria %}<p><em>Como validar:</em> {{ task.acceptance_criteria|linebreaksbr }}</p>{% endif %}
+            <div class="muted">{% blocktranslate with day=task.started_on|date:"d/m/Y" %}Início: {{ day }}{% endblocktranslate %}{% if task.finished_on %} · {% blocktranslate with day=task.finished_on|date:"d/m/Y" %}Término: {{ day }}{% endblocktranslate %}{% endif %}</div>
+            {% if task.description %}<p><em>{% translate "Objetivos:" %}</em> {{ task.description|linebreaksbr }}</p>{% endif %}
+            {% if task.acceptance_criteria %}<p><em>{% translate "Como validar:" %}</em> {{ task.acceptance_criteria|linebreaksbr }}</p>{% endif %}
         </div>
         <div class="task-side">
-            <div><strong>Total: {{ task.minutes_spent|decimal_hours }}</strong> · <a href="{% url 'tasks:task_update' task.pk %}">Editar</a></div>
+            <div><strong>{% blocktranslate with total=task.minutes_spent|decimal_hours %}Total: {{ total }}{% endblocktranslate %}</strong> · <a href="{% url 'tasks:task_update' task.pk %}">{% translate "Editar" %}</a></div>
             <form method="post" action="{% url 'tasks:task_add_time' task.pk %}" class="add-time">
                 {% csrf_token %}
                 {{ add_time_form.time }}
-                <button type="submit" aria-label="Adicionar tempo a {{ task.name }}">+ Tempo</button>
+                <button type="submit" aria-label="{% blocktranslate with name=task.name %}Adicionar tempo a {{ name }}{% endblocktranslate %}">{% translate "+ Tempo" %}</button>
             </form>
         </div>
     </div>
     {% empty %}
-    <p class="muted">Ainda não há tarefas neste projeto.</p>
+    <p class="muted">{% translate "Ainda não há tarefas neste projeto." %}</p>
     {% endfor %}
 </div>
 {% endblock %}

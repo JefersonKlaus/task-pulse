@@ -1,0 +1,118 @@
+{% extends "tasks/base.html" %}
+{% load task_time money %}
+{% load i18n %}
+{% block title %}{% translate "Estatísticas" %} | Task Pulse{% endblock %}
+{% block content %}
+<h1>{% translate "Estatísticas" %}</h1>
+<form method="get" class="filters">
+    {{ form.non_field_errors }}
+    {% if form.fields.empresa.queryset.exists %}{% include "tasks/_filter_field.html" with field=form.empresa %}{% endif %}
+    {% include "tasks/_filter_field.html" with field=form.inicio %}
+    {% include "tasks/_filter_field.html" with field=form.fim %}
+    {% include "tasks/_filter_field.html" with field=form.agrupar %}
+    <div class="actions"><button type="submit">{% translate "Atualizar" %}</button></div>
+</form>
+
+{% if report %}
+<div class="stats">
+    <div class="card stat">{% translate "Horas trabalhadas" %}<span class="value">{{ report.minutes|decimal_hours }}</span><span class="muted">{% blocktranslate with hours=report.unpaid_minutes|decimal_hours %}{{ hours }} não pagas{% endblocktranslate %}</span></div>
+    <div class="card stat">{% translate "Tarefas" %}<span class="value">{{ report.tasks }}</span><span class="muted">{% blocktranslate count counter=report.done_tasks %}{{ counter }} concluída (Done){% plural %}{{ counter }} concluídas (Done){% endblocktranslate %}</span></div>
+    <div class="card stat wide">{% translate "Recebido" %}<span class="value">{{ report.received_usd|usd }}</span><span class="muted">{% blocktranslate count counter=report.payments %}{{ counter }} pagamento{% plural %}{{ counter }} pagamentos{% endblocktranslate %}</span></div>
+    <div class="card stat wide">{% translate "Média por hora paga" %}<span class="value">{% if report.average_hourly_usd is not None %}{{ report.average_hourly_usd|usd }}{% else %}—{% endif %}</span><span class="muted">{% translate "Recebido ÷ horas das tarefas pagas" %}</span></div>
+</div>
+
+{% if report.empty %}
+<div class="card"><p>{% translate "Nenhuma tarefa ou pagamento neste período." %}</p></div>
+{% else %}
+<div class="charts">
+    <section class="card chart-card">
+        <h2>{% translate "Horas" %}</h2>
+        <p class="muted">{% if by_week %}{% translate "Por semana de início das tarefas." %}{% else %}{% translate "Por mês de início das tarefas." %}{% endif %}</p>
+        {% include "tasks/_bar_chart.html" with chart=hours_chart %}
+    </section>
+    <section class="card chart-card">
+        <h2>{% translate "Tarefas" %}</h2>
+        <p class="muted">{% if by_week %}{% translate "Por semana de início, por status." %}{% else %}{% translate "Por mês de início, por status." %}{% endif %}</p>
+        {% include "tasks/_bar_chart.html" with chart=tasks_chart %}
+    </section>
+    <section class="card chart-card">
+        <h2>{% translate "Recebido (US$)" %}</h2>
+        <p class="muted">{% if by_week %}{% translate "Por semana em que o pagamento foi registrado." %}{% else %}{% translate "Por mês em que o pagamento foi registrado." %}{% endif %}</p>
+        {% include "tasks/_bar_chart.html" with chart=received_chart %}
+    </section>
+    {% if not form.cleaned_data.empresa and project_rows %}
+    <section class="card chart-card">
+        <h2>{% translate "Horas por empresa" %}</h2>
+        <p class="muted">{% translate "Tarefas iniciadas no período." %}</p>
+        {% for row in provider_rows %}
+        <div class="hbar-row">
+            <span class="hbar-label" title="{{ row.label }}">{{ row.label }}</span>
+            <span class="hbar-value">{{ row.value }}</span>
+            <span class="hbar-track" aria-hidden="true"><span class="hbar" style="width: {{ row.percent }}%"></span></span>
+        </div>
+        {% endfor %}
+    </section>
+    {% endif %}
+    <section class="card chart-card">
+        <h2>{% translate "Horas por projeto" %}</h2>
+        <p class="muted">{% translate "Tarefas iniciadas no período." %}</p>
+        {% for row in project_rows %}
+        <div class="hbar-row">
+            <span class="hbar-label" title="{{ row.label }}">{{ row.label }}</span>
+            <span class="hbar-value">{{ row.value }}</span>
+            <span class="hbar-track" aria-hidden="true"><span class="hbar" style="width: {{ row.percent }}%"></span></span>
+        </div>
+        {% empty %}
+        <p class="muted">{% translate "Nenhuma tarefa iniciada no período." %}</p>
+        {% endfor %}
+    </section>
+</div>
+
+<div class="card">
+    <details>
+        <summary>{% translate "Ver tabela" %}</summary>
+        <div class="table-scroll">
+        <table class="tasks stats-table">
+            <thead>
+                <tr>
+                    <th>{{ grouping_label }}</th>
+                    <th class="number">{% translate "Horas" %}</th>
+                    <th class="number">{% translate "Pagas" %}</th>
+                    <th class="number">{% translate "Não pagas" %}</th>
+                    <th class="number">{% translate "Tarefas" %}</th>
+                    <th class="number">{% translate "Concluídas" %}</th>
+                    <th class="number">{% translate "Recebido" %}</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for stats in report.buckets %}
+                <tr>
+                    <td>{{ stats.bucket.label }}</td>
+                    <td class="number">{{ stats.minutes|decimal_hours }}</td>
+                    <td class="number">{{ stats.paid_minutes|decimal_hours }}</td>
+                    <td class="number">{{ stats.unpaid_minutes|decimal_hours }}</td>
+                    <td class="number">{{ stats.tasks }}</td>
+                    <td class="number">{{ stats.tasks_by_status.DONE }}</td>
+                    <td class="number">{{ stats.received_usd|usd }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+            <tfoot>
+                <tr>
+                    <td>{% translate "Total" %}</td>
+                    <td class="number">{{ report.minutes|decimal_hours }}</td>
+                    <td class="number">{{ report.paid_minutes|decimal_hours }}</td>
+                    <td class="number">{{ report.unpaid_minutes|decimal_hours }}</td>
+                    <td class="number">{{ report.tasks }}</td>
+                    <td class="number">{{ report.done_tasks }}</td>
+                    <td class="number">{{ report.received_usd|usd }}</td>
+                </tr>
+            </tfoot>
+        </table>
+        </div>
+    </details>
+    <p class="muted">{% translate "As tarefas entram pela data de início, como no Faturamento; o dinheiro, pela data em que o pagamento foi registrado. A média por hora divide o recebido pelas horas das tarefas desses pagamentos." %}</p>
+</div>
+{% endif %}
+{% endif %}
+{% endblock %}

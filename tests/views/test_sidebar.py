@@ -2,8 +2,11 @@ from django.test import TestCase
 from django.urls import reverse
 
 LINKS = {
-    "tasks:dashboard": "Painel",
+    "tasks:statistics": "Estatísticas",
+    "tasks:billing": "Faturamento",
+    "tasks:payment_list": "Pagamentos",
     "tasks:project_list": "Projetos",
+    "tasks:provider_list": "Empresas",
     "tasks:task_import": "Importar tarefas",
 }
 

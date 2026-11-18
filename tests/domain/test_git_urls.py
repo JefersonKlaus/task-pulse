@@ -1,6 +1,11 @@
 from django.test import SimpleTestCase
 
-from src.domain.git_urls import is_web_url, project_name_from_url
+from src.domain.git_urls import (
+    is_web_url,
+    project_name_from_url,
+    repository_key,
+    repository_url,
+)
 
 
 class ProjectNameFromUrlTests(SimpleTestCase):
@@ -27,3 +32,65 @@ class IsWebUrlTests(SimpleTestCase):
         ):
             with self.subTest(url=url):
                 self.assertIs(is_web_url(url), expected)
+
+
+class RepositoryKeyTests(SimpleTestCase):
+    def test_the_same_repository_however_written(self):
+        for url in (
+            "https://github.com/acme/portal",
+            "https://github.com/acme/portal.git",
+            "https://GitHub.com/Acme/Portal/",
+            "http://www.github.com/acme/portal",
+            "git@github.com:acme/portal.git",
+            "ssh://git@github.com/acme/portal.git",
+            "  https://github.com/acme/portal  ",
+        ):
+            with self.subTest(url=url):
+                self.assertEqual(repository_key(url), "github.com/acme/portal")
+
+    def test_other_hosts_and_repositories_differ(self):
+        self.assertNotEqual(
+            repository_key("https://github.com/acme/portal"),
+            repository_key("https://github.com/acme/portal-api"),
+        )
+        self.assertEqual(
+            repository_key("https://git.acme.com/team/api.git"), "git.acme.com/team/api"
+        )
+
+    def test_not_a_repository(self):
+        for url in (
+            "",
+            "portal",
+            "https://github.com/",  # no repository
+            "javascript:alert(1)",
+            "ftp://github.com/acme/portal",
+            "https://github.com/acme/por tal",
+        ):
+            with self.subTest(url=url):
+                self.assertIsNone(repository_key(url))
+
+
+class RepositoryUrlTests(SimpleTestCase):
+    def test_github_short_form_becomes_a_url(self):
+        for value, url in (
+            ("acme/portal", "https://github.com/acme/portal"),
+            ("acme/portal.git", "https://github.com/acme/portal"),
+            ("Acme-Labs/task.pulse_2", "https://github.com/Acme-Labs/task.pulse_2"),
+        ):
+            with self.subTest(value=value):
+                self.assertEqual(repository_url(value), url)
+
+    def test_a_url_is_kept_as_written(self):
+        for url in (
+            "https://github.com/acme/portal.git",
+            "git@github.com:acme/portal.git",
+            "https://git.acme.com/team/api",
+        ):
+            with self.subTest(url=url):
+                self.assertEqual(repository_url(f" {url} "), url)
+
+    def test_anything_else_is_rejected(self):
+        for value in ("portal", "acme/portal/extra", "/portal", "https://github.com/"):
+            with self.subTest(value=value):
+                with self.assertRaises(ValueError):
+                    repository_url(value)

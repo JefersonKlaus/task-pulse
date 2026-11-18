@@ -1,3 +1,4 @@
+import re
 from datetime import date
 
 from django.test import TestCase
@@ -5,7 +6,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from src.models import Project, Task
-from tests.factories import create_project, create_task
+from tests.factories import create_project, create_provider, create_task
 from tests.payloads import project_form_data, task_create_data
 
 
@@ -24,6 +25,17 @@ class ProjectListTests(TestCase):
             response, reverse("tasks:project_detail", args=[project.pk])
         )
 
+    def test_one_row_per_project_in_name_order(self):
+        for name in ("Portal", "API", "Mobile"):
+            create_project(name=name)
+        content = self.client.get(reverse("tasks:project_list")).content.decode()
+        rows = re.findall(
+            r'<li>\s*<a href=[^>]*>\s*<span class="project-info">\s*'
+            r'<span class="project-title"><strong>(.*?)</strong>',
+            content,
+        )
+        self.assertEqual(rows, ["API", "Mobile", "Portal"])
+
     def test_empty_list_invites_to_create_a_project(self):
         response = self.client.get(reverse("tasks:project_list"))
         self.assertContains(response, "Nenhum projeto cadastrado.")
@@ -34,12 +46,17 @@ class ProjectCreateTests(TestCase):
     url = reverse("tasks:project_create")
 
     def test_creates_the_project_named_after_its_repository(self):
+        provider = create_provider()
         response = self.client.post(
-            self.url, project_form_data(url="git@github.com:acme/api.git", name="")
+            self.url,
+            project_form_data(
+                url="git@github.com:acme/api.git", name="", provider=provider.pk
+            ),
         )
         project = Project.objects.get()
         self.assertEqual(
-            (project.url, project.name), ("git@github.com:acme/api.git", "api")
+            (project.url, project.name, project.provider),
+            ("git@github.com:acme/api.git", "api", provider),
         )
         self.assertRedirects(
             response, reverse("tasks:project_detail", args=[project.pk])
@@ -50,6 +67,12 @@ class ProjectCreateTests(TestCase):
         self.assertContains(response, "Este campo é obrigatório.")
         self.assertFalse(Project.objects.exists())
 
+    def test_a_project_needs_its_company(self):
+        # The company pays for the project's tasks.
+        response = self.client.post(self.url, project_form_data())
+        self.assertContains(response, "Este campo é obrigatório.", count=1)
+        self.assertFalse(Project.objects.exists())
+
 
 class ProjectUpdateTests(TestCase):
     def setUp(self):
@@ -58,12 +81,23 @@ class ProjectUpdateTests(TestCase):
         )
         self.url = reverse("tasks:project_update", args=[self.project.pk])
 
+    def test_edit_page_shows_the_current_values(self):
+        response = self.client.get(self.url)
+        self.assertContains(response, 'value="Portal"')
+        self.assertContains(response, 'value="https://github.com/acme/portal"')
+
     def test_updates_and_goes_back_to_the_project(self):
+        provider = create_provider()
         response = self.client.post(
-            self.url, project_form_data(url=self.project.url, name="Portal 2")
+            self.url,
+            project_form_data(
+                url=self.project.url, name="Portal 2", provider=provider.pk
+            ),
         )
         self.project.refresh_from_db()
-        self.assertEqual(self.project.name, "Portal 2")
+        self.assertEqual(
+            (self.project.name, self.project.provider), ("Portal 2", provider)
+        )
         self.assertRedirects(
             response, reverse("tasks:project_detail", args=[self.project.pk])
         )

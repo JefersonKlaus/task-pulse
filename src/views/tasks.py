@@ -1,5 +1,6 @@
 from django.contrib import messages
 from django.shortcuts import get_object_or_404, redirect, render
+from django.utils.translation import gettext as _
 from django.views.decorators.http import require_POST
 
 from ..domain.durations import format_decimal_hours, format_hmm
@@ -25,12 +26,17 @@ def task_add_time(request, pk):
         task.add_time(added)
         messages.success(
             request,
-            f"{format_hmm(added)} adicionado a “{task.name}”. "
-            f"Total: {format_decimal_hours(task.minutes_spent)}.",
+            _("%(time)s adicionado a “%(task)s”. Total: %(total)s.")
+            % {
+                "time": format_hmm(added),
+                "task": task.name,
+                "total": format_decimal_hours(task.minutes_spent),
+            },
         )
     else:
         messages.error(
             request,
-            f"Tempo não adicionado a “{task.name}”: {form.errors['time'][0]}",
+            _("Tempo não adicionado a “%(task)s”: %(error)s")
+            % {"task": task.name, "error": form.errors["time"][0]},
         )
     return redirect("tasks:project_detail", pk=task.project_id)

@@ -15,6 +15,7 @@ from src.integrations.exchange_rates import (
 )
 from src.integrations.exchange_rates.awesomeapi import (
     DEFAULT_URL,
+    MAX_RESPONSE_BYTES,
     AwesomeApiProvider,
     parse_response,
 )
@@ -57,9 +58,18 @@ class AwesomeApiTests(SimpleTestCase):
         rate = AwesomeApiProvider(
             url="https://x.test/r", timeout=3, opener=opener
         ).usd_brl()
+        request = opener.call_args.args[0]
         self.assertEqual(rate, RATE)
-        self.assertEqual(opener.call_args.args[0].full_url, "https://x.test/r")
+        self.assertEqual(request.full_url, "https://x.test/r")
+        self.assertEqual(request.get_header("Accept"), "application/json")
         self.assertEqual(opener.call_args.kwargs["timeout"], 3)
+
+    def test_response_size_is_limited(self):
+        # A broken or hostile server can't make the page read without limit.
+        opener = fake_opener()
+        AwesomeApiProvider(opener=opener).usd_brl()
+        response = opener.return_value
+        response.read.assert_called_once_with(MAX_RESPONSE_BYTES)
 
     def test_network_problems_become_unavailable(self):
         for error in (

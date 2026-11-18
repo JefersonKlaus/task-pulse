@@ -1,0 +1,26 @@
+{% extends "tasks/base.html" %}
+{% load i18n %}
+{% block title %}{% translate "Empresas" %} | Task Pulse{% endblock %}
+{% block content %}
+<div class="topbar">
+    <div><h1>{% translate "Empresas" %}</h1><p class="muted">{% translate "As empresas para quem você trabalha. Cada projeto pertence a uma, e os relatórios podem ser filtrados por empresa." %}</p></div>
+    <a class="button" href="{% url 'tasks:provider_create' %}">{% translate "Nova empresa" %}</a>
+</div>
+{% if providers %}
+<ul class="card project-list provider-list">
+    {% for provider in providers %}
+    <li>
+        <a href="{% url 'tasks:project_list' %}?empresa={{ provider.pk }}">
+            <span class="project-info">
+                <strong>{{ provider.name }}</strong>
+                <span class="muted">{% blocktranslate count counter=provider.project_count %}{{ counter }} projeto{% plural %}{{ counter }} projetos{% endblocktranslate %}</span>
+            </span>
+        </a>
+        <a class="edit" href="{% url 'tasks:provider_update' provider.pk %}" aria-label="{% blocktranslate with name=provider.name %}Editar {{ name }}{% endblocktranslate %}">{% translate "Editar" %}</a>
+    </li>
+    {% endfor %}
+</ul>
+{% else %}
+<div class="card"><p>{% translate "Nenhuma empresa cadastrada." %}</p><a href="{% url 'tasks:provider_create' %}">{% translate "Cadastre a primeira empresa" %}</a></div>
+{% endif %}
+{% endblock %}
