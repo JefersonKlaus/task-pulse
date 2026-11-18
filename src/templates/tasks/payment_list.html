@@ -1,0 +1,89 @@
+{% extends "tasks/base.html" %}
+{% load i18n %}
+{% load task_time money %}
+{% block title %}{% translate "Pagamentos" %} | Task Pulse{% endblock %}
+{% block content %}
+{% with totals=history.totals page=history.page %}
+<div class="topbar">
+    <div><h1>{% translate "Pagamentos" %}</h1><p class="muted">{% translate "Pagamentos registrados pelo botão Pagar do Faturamento, do mais recente ao mais antigo." %}</p></div>
+    {% if totals.count %}<a class="button" href="{% url 'tasks:payment_export' %}{% if provider %}?empresa={{ provider.pk }}{% endif %}" download>{% translate "Exportar CSV" %}</a>{% endif %}
+</div>
+{% if filter_form.fields.empresa.queryset.exists %}{% include "tasks/_provider_filter.html" with form=filter_form %}{% endif %}
+
+{% if totals.count %}
+<div class="stats">
+    <div class="card stat wide">{% translate "Pagamentos" %}<span class="value">{{ totals.count }}</span></div>
+    <div class="card stat wide">{% translate "Total pago em dólar" %}<span class="value">{{ totals.paid_usd|usd }}</span><span class="muted">{% translate "Estimado" %} <span class="nowrap">{{ totals.estimated_usd|usd }}</span></span></div>
+    <div class="card stat wide">{% translate "Total pago em real" %}<span class="value">{{ totals.paid_brl|brl }}</span><span class="muted">{% translate "Estimado" %} {% if totals.estimated_brl is not None %}<span class="nowrap">{{ totals.estimated_brl|brl }}</span>{% else %}—{% endif %}</span></div>
+</div>
+
+<div class="card">
+    <div class="table-scroll">
+    {# On phones each row is a card; base.html places and labels the cells by position (table.cards), so update it when adding or moving a column. #}
+    <table class="tasks payments cards">
+        <thead>
+            <tr>
+                <th>{% translate "Período" %}</th>
+                <th class="number">{% translate "Tarefas" %}</th>
+                <th class="number">{% translate "Horas" %}</th>
+                <th class="number">{% translate "Estimado" %}</th>
+                <th class="number">{% translate "Pago" %}</th>
+                <th class="number">{% translate "Diferença" %}</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for payment in history.payments %}
+            <tr class="payment">
+                <td>{% blocktranslate with start=payment.period_start|date:"d/m/Y" end=payment.period_end|date:"d/m/Y" %}<span class="nowrap">{{ start }}</span> a <span class="nowrap">{{ end }}</span>{% endblocktranslate %}{% if payment.provider_name %} <span class="provider-tag">{{ payment.provider_name }}</span>{% elif payment.mixes_providers %} <span class="provider-tag none">{% translate "Várias empresas" %}</span>{% endif %}
+                    <small class="muted registered">{% blocktranslate with when=payment.created_at|date:"d/m/Y H:i" %}Registrado em <span class="nowrap">{{ when }}</span>{% endblocktranslate %}</small></td>
+                <td class="number">{{ payment.task_count }}</td>
+                <td class="number">{{ payment.minutes|decimal_hours }}</td>
+                <td class="number">{{ payment.estimated_usd|usd }}<span class="muted">{% if payment.estimated_brl is not None %}{{ payment.estimated_brl|brl }}{% else %}—{% endif %}</span></td>
+                <td class="number">{{ payment.paid_usd|usd }}<span class="muted">{{ payment.paid_brl|brl }}</span></td>
+                <td class="number{% if payment.difference_usd < 0 %} negative{% endif %}">{{ payment.difference_usd|usd }}<span class="muted">{% if payment.difference_brl is not None %}{{ payment.difference_brl|brl }}{% else %}—{% endif %}</span></td>
+            </tr>
+            <tr class="payment-tasks">
+                <td colspan="6">
+                    <details>
+                        <summary>{% translate "Ver tarefas" %}</summary>
+                        <ul class="paid-tasks">
+                            {% for task in payment.tasks.all %}
+                            <li><a href="{% url 'tasks:task_update' task.pk %}">{% if task.external_id %}#{{ task.external_id }} {% endif %}{{ task.name }}</a> <span class="muted">{{ task.project.name }} · {{ task.get_status_display }} · {{ task.minutes_spent|decimal_hours }}</span></li>
+                            {% endfor %}
+                        </ul>
+                    </details>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+        <tfoot>
+            {% with sub=history.page_totals %}
+            <tr>
+                <td colspan="3">{% if page.paginator.num_pages > 1 %}{% translate "Total desta página" %}{% else %}{% translate "Total" %}{% endif %}</td>
+                <td class="number">{{ sub.estimated_usd|usd }}<span class="muted">{% if sub.estimated_brl is not None %}{{ sub.estimated_brl|brl }}{% else %}—{% endif %}</span></td>
+                <td class="number">{{ sub.paid_usd|usd }}<span class="muted">{{ sub.paid_brl|brl }}</span></td>
+                <td class="number{% if sub.difference_usd < 0 %} negative{% endif %}">{{ sub.difference_usd|usd }}<span class="muted">{% if sub.difference_brl is not None %}{{ sub.difference_brl|brl }}{% else %}—{% endif %}</span></td>
+            </tr>
+            {% endwith %}
+        </tfoot>
+    </table>
+    </div>
+    {% if page.paginator.num_pages > 1 %}
+    <nav class="pagination" aria-label="{% translate "Páginas de pagamentos" %}">
+        {% if page.has_previous %}<a href="{{ page_link }}{{ page.previous_page_number }}" rel="prev">{% translate "‹ Anterior" %}</a>{% else %}<span class="disabled">{% translate "‹ Anterior" %}</span>{% endif %}
+        {% for number in page_range %}
+        {% if number == page.number %}<span class="current" aria-current="page">{{ number }}</span>{% elif number == page.paginator.ELLIPSIS %}<span class="ellipsis">…</span>{% else %}<a href="{{ page_link }}{{ number }}">{{ number }}</a>{% endif %}
+        {% endfor %}
+        {% if page.has_next %}<a href="{{ page_link }}{{ page.next_page_number }}" rel="next">{% translate "Próxima ›" %}</a>{% else %}<span class="disabled">{% translate "Próxima ›" %}</span>{% endif %}
+    </nav>
+    <p class="muted pagination-info">{% blocktranslate with first=page.start_index last=page.end_index total=totals.count %}Mostrando {{ first }}–{{ last }} de {{ total }} pagamentos.{% endblocktranslate %}</p>
+    {% endif %}
+    <p class="muted">{% translate "Valores em dólar e, abaixo, em reais. Diferença = pago − estimado. Sem cotação no momento do pagamento, o estimado em reais fica “—”." %}</p>
+</div>
+{% elif provider %}
+<div class="card"><p>{% translate "Nenhum pagamento desta empresa." %}</p></div>
+{% else %}
+<div class="card"><p>{% translate "Nenhum pagamento registrado." %}</p><a href="{% url 'tasks:billing' %}">{% translate "Registre um pagamento pelo Faturamento" %}</a></div>
+{% endif %}
+{% endwith %}
+{% endblock %}

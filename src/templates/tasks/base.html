@@ -1,11 +1,11 @@
-<!doctype html>
-<html lang="pt-br">
+{% load i18n %}<!doctype html>
+<html lang="{{ LANGUAGE_CODE }}">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{% block title %}Task Pulse{% endblock %}</title>
     <style>
-        :root { color-scheme: light; font-family: system-ui, sans-serif; color: #172033; background: #f4f6fb; }
+        :root { color-scheme: light; font-family: system-ui, sans-serif; color: #172033; background: #f4f6fb; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
         body { margin: 0; }
         .layout { display: flex; align-items: flex-start; min-height: 100vh; }
         .sidebar { flex: 0 0 220px; box-sizing: border-box; min-height: 100vh; position: sticky; top: 0; display: flex; flex-direction: column; gap: 28px; padding: 28px 20px; background: #172033; color: white; }
@@ -15,15 +15,39 @@
         .sidebar nav a:hover { background: #ffffff14; color: white; }
         .sidebar nav a.active { background: #335eea; color: white; }
         .content { flex: 1; min-width: 0; }
+        /* The app bar and the scrim behind the open drawer exist only on phones. */
+        .appbar, .scrim { display: none; }
+        /* Read by screen readers, not shown. */
+        .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
         main { max-width: 960px; margin: 36px auto; padding: 0 20px; }
-        @media (max-width: 720px) {
-            .layout { flex-direction: column; }
-            .sidebar { position: static; min-height: auto; flex: 0 0 auto; width: 100%; }
-            .sidebar nav { flex-direction: row; flex-wrap: wrap; }
-        }
         a { color: #335eea; text-decoration: none; }
         .topbar, .task { display: flex; justify-content: space-between; align-items: center; gap: 16px; }
-        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; }
+        /* The company filter of the lists (projects, payments). */
+        form.list-filter { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 10px; margin: 0 0 16px; padding: 0; border: 0; background: none; box-shadow: none; }
+        form.list-filter label { margin: 0; }
+        form.list-filter select { width: auto; min-width: 14em; }
+        form.list-filter button { padding: 9px 14px; }
+        form.list-filter .errorlist { flex-basis: 100%; margin: 0; }
+        .provider-tag { display: inline-block; padding: 1px 8px; border-radius: 999px; background: #eef2ff; color: #3538cd; font-size: .8em; font-weight: 600; white-space: nowrap; }
+        .provider-tag.none { background: #f2f4f7; color: #667085; font-weight: 400; }
+        /* Projects: one row per project, the whole row is the link. */
+        .card.project-list { list-style: none; margin: 0; padding: 4px 0; overflow: hidden; }
+        .project-list li + li { border-top: 1px solid #e8ebf2; }
+        .project-list a { display: flex; align-items: center; gap: 16px; padding: 14px 22px; color: inherit; }
+        .project-list a:hover { background: #f4f6fb; }
+        .project-list a:hover strong { color: #335eea; }
+        .project-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+        .project-info strong { overflow-wrap: anywhere; }
+        .project-info .muted { font-size: .9em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .project-tasks { flex: none; color: #667085; white-space: nowrap; }
+        .project-tasks::after { content: "›"; margin-left: 12px; color: #98a2b3; }
+        .project-title .provider-tag { margin-left: 6px; vertical-align: 1px; }
+        .topbar > .button { flex: none; white-space: nowrap; }
+        /* Companies: the row opens its projects; "Editar" is a link of its own. */
+        .provider-list li { display: flex; align-items: center; }
+        .provider-list li > a:first-child { flex: 1; min-width: 0; }
+        .provider-list a.edit { flex: none; padding: 14px 22px 14px 4px; color: #335eea; }
+        .provider-list li > a:first-child::after { content: "›"; margin-left: 12px; color: #98a2b3; }
         .card, form { background: white; border: 1px solid #e1e5ef; border-radius: 12px; padding: 22px; box-shadow: 0 3px 12px #1720330b; }
         .task { padding: 16px 0; border-bottom: 1px solid #e8ebf2; }
         .task:last-child { border-bottom: 0; }
@@ -39,9 +63,9 @@
         summary.button::-webkit-details-marker { display: none; }
         .new-task form { margin: 16px 0; }
         input[type="checkbox"] { width: auto; margin: 0 6px 0 0; }
-        fieldset.statuses { grid-column: 1 / -1; border: 0; margin: 14px 0 0; padding: 0; }
-        fieldset.statuses legend { font-weight: 600; padding: 0; margin-bottom: 6px; }
-        fieldset.statuses label { display: inline-flex; align-items: center; font-weight: 400; margin: 0 18px 0 0; }
+        fieldset.choices { grid-column: 1 / -1; border: 0; margin: 14px 0 0; padding: 0; }
+        fieldset.choices legend { font-weight: 600; padding: 0; margin-bottom: 6px; }
+        fieldset.choices label { display: inline-flex; align-items: center; font-weight: 400; margin: 0 18px 0 0; }
         input:disabled { background: #f4f6fb; color: #98a2b3; }
         form.add-time { display: flex; gap: 6px; align-items: center; margin: 0; padding: 0; border: 0; box-shadow: none; background: none; }
         form.add-time input { width: 6.5em; padding: 6px 8px; }
@@ -50,10 +74,23 @@
         .messages { list-style: none; padding: 0; margin: 0 0 20px; }
         .messages li { padding: 12px 16px; border-radius: 8px; background: #ecfdf3; color: #05603a; }
         .messages li.error { background: #fef3f2; color: #b42318; }
-        .filters { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 0 16px; align-items: end; }
+        /* Billing filter: every field spans 3 shared rows (label, input, notes),
+           so inputs line up even when a label wraps or a field has help or errors. */
+        .filters { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 0 16px; align-items: start; }
+        .filters .field { display: grid; grid-row: span 3; grid-template-rows: subgrid; }
+        .filters .field label { align-self: end; }
+        .filters .field input { height: 40px; }
+        .filters .notes .errorlist { margin: 6px 0 0; }
+        .filters > .errorlist, .filters .actions { grid-column: 1 / -1; }
         .filters .actions { padding-top: 14px; }
         .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin: 20px 0; }
-        .stat .value { display: block; font-size: 1.6em; font-weight: 700; margin-top: 6px; }
+        /* Big numbers shrink with their card (cqi = 1% of its width) instead of
+           overflowing it; wide cards keep the full 1.6em. */
+        .stat { container-type: inline-size; overflow-wrap: break-word; }
+        .stat .value { display: block; font-size: min(1.6em, 10.5cqi); font-weight: 700; margin-top: 6px; white-space: nowrap; }
+        /* A table wider than its card scrolls inside the card. */
+        .table-scroll { overflow-x: auto; }
+        .nowrap { white-space: nowrap; }
         .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px; }
         .chip { padding: 6px 12px; border-radius: 999px; background: white; border: 1px solid #e1e5ef; }
         table.tasks { width: 100%; border-collapse: collapse; }
@@ -63,19 +100,249 @@
         .warning { padding: 12px 16px; border-radius: 8px; background: #fffaeb; color: #93370d; }
         pre.sample { background: #f4f6fb; padding: 12px; border-radius: 8px; overflow-x: auto; }
         select { background: white; }
+        .status.paid { background: #ecfdf3; color: #05603a; }
+        .to-pay { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-bottom: 20px; }
+        button.secondary { background: #e8ebf2; color: #172033; }
+        dialog { border: 0; padding: 0; border-radius: 12px; width: min(480px, calc(100% - 32px)); }
+        dialog::backdrop { background: #17203380; }
+        dialog form { border: 0; box-shadow: none; }
+        dialog h2 { margin-top: 0; }
+        .payment-totals { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 16px 0; }
+        .payment-totals dt { color: #667085; font-size: .9em; }
+        .payment-totals dd { margin: 2px 0 0; font-weight: 700; }
+        .dialog-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; }
+        table.payments { font-size: .95em; }
+        table.payments th, table.payments td { padding: 8px 5px; }
+        table.payments td.number .muted, table.payments .registered { display: block; font-weight: 400; }
+        table.payments td.negative { color: #b42318; }
+        table.payments tr.payment td { border-bottom: 0; padding-bottom: 2px; }
+        table.payments tr.payment-tasks td { padding-top: 0; }
+        table.payments summary { cursor: pointer; color: #335eea; font-size: .9em; }
+        .pagination { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; margin: 18px 0 4px; }
+        .pagination a, .pagination span { min-width: 2.4em; padding: 7px 10px; border-radius: 7px; border: 1px solid #e1e5ef; text-align: center; box-sizing: border-box; }
+        .pagination a:hover { background: #f4f6fb; }
+        .pagination .current { background: #335eea; border-color: #335eea; color: white; font-weight: 600; }
+        .pagination .disabled { color: #98a2b3; }
+        .pagination .ellipsis { border-color: transparent; }
+        .pagination-info { text-align: center; margin: 0 0 12px; }
+        .filters .field select { height: 40px; }
+        fieldset.destination { border: 1px solid #e1e5ef; border-radius: 10px; margin: 20px 0 0; padding: 6px 16px 16px; }
+        fieldset.destination legend { font-weight: 600; padding: 0 6px; }
+        fieldset.destination > p.muted { margin: 4px 0 0; }
+        /* Estatísticas: bar charts drawn with CSS (see _bar_chart.html). */
+        .charts { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 400px), 1fr)); gap: 16px; margin-bottom: 20px; }
+        .chart-card { container-type: inline-size; }
+        .chart-card h2 { margin: 0; font-size: 1.15em; }
+        .chart-card > p.muted { margin: 4px 0 16px; font-size: .9em; }
+        .chart { display: grid; grid-template-columns: auto minmax(0, 1fr); grid-template-rows: 180px auto; column-gap: 8px; font-size: .75em; color: #667085; }
+        .chart-y { position: relative; min-width: 2.4em; }
+        .chart-y span { position: absolute; right: 0; transform: translateY(50%); line-height: 1; white-space: nowrap; }
+        .chart-plot { position: relative; display: flex; align-items: flex-end; gap: 4px; border-bottom: 1px solid #cbd2e0; }
+        .chart-line { position: absolute; left: 0; right: 0; border-top: 1px dashed #e1e5ef; }
+        .chart-bar { position: relative; flex: 1 1 0; min-width: 0; height: 100%; display: flex; flex-direction: column-reverse; }
+        .chart-bar:hover { background: #f4f6fb; }
+        .chart-bar span { flex: none; }
+        .chart-bar span:last-child { border-radius: 3px 3px 0 0; }
+        /* Labels are centred under their bar, even when wider than it. */
+        .chart-x { grid-column: 2; display: flex; gap: 4px; padding-top: 6px; }
+        .chart-x span { flex: 1 1 0; min-width: 0; display: flex; justify-content: center; white-space: nowrap; }
+        .chart.dense .chart-plot, .chart.dense .chart-x { gap: 2px; }
+        /* Only some bars are labelled when the labels would overlap: in a
+           narrow chart, or with many bars. */
+        .chart.dense .chart-x .minor { visibility: hidden; }
+        @container (max-width: 560px) { .chart-x .minor { visibility: hidden; } }
+        .legend { display: flex; flex-wrap: wrap; gap: 6px 16px; list-style: none; padding: 0; margin: 12px 0 0; font-size: .85em; color: #667085; }
+        .swatch { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 6px; }
+        .paid { background: #335eea; }
+        .unpaid { background: #a4bcfd; }
+        .done { background: #12b76a; }
+        .review { background: #f79009; }
+        .doing { background: #2e90fa; }
+        .rejected { background: #f04438; }
+        .received { background: #0e9384; }
+        .hbar-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 12px; margin-bottom: 12px; font-size: .9em; }
+        .hbar-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .hbar-value { font-variant-numeric: tabular-nums; }
+        .hbar-track { grid-column: 1 / -1; height: 10px; border-radius: 5px; background: #f4f6fb; }
+        .hbar { display: block; height: 100%; border-radius: 5px; background: #335eea; }
+        /* The month or week stays in view while the table scrolls sideways. */
+        .stats-table th:first-child, .stats-table td:first-child { position: sticky; left: 0; background: white; }
+        .paid-tasks { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 6px 24px; margin: 10px 0 4px; padding-left: 18px; }
+        /* Language switch (top right; in the app bar on phones). */
+        .content { position: relative; }
+        .language { position: absolute; top: 12px; right: 20px; z-index: 5; display: flex; align-items: center; gap: 6px; margin: 0; padding: 0; border: 0; background: none; box-shadow: none; color: #667085; }
+        .language-options { display: inline-flex; border: 1px solid #cbd2e0; border-radius: 8px; overflow: hidden; background: white; }
+        .language button { padding: 5px 10px; border-radius: 0; background: transparent; color: #344054; font-size: .8em; letter-spacing: .03em; }
+        .language button + button { border-left: 1px solid #cbd2e0; }
+        .language button:hover { background: #f4f6fb; }
+
+        /* Touch screens (phones, tablets): 16px text in fields, because iOS
+           zooms into any field with smaller text when it gets the focus. */
+        @media (pointer: coarse) {
+            input, select, textarea { font-size: 16px; }
+        }
+
+        /* ---------- Phones and small tablets ---------- */
+        @media (max-width: 720px) {
+            /* stretch: the content takes the screen width, not its widest table. */
+            .layout { flex-direction: column; align-items: stretch; }
+
+            /* Navigation drawer, as on Android: the app bar's menu button
+               slides the sidebar in from the left, over a dimmed page.
+               The script at the end of <body> opens and closes it. */
+            .appbar { display: flex; align-items: center; gap: 6px; position: sticky; top: 0; z-index: 10; min-height: 56px; box-sizing: border-box; padding: 4px 14px 4px 4px; background: #172033; color: white; box-shadow: 0 2px 6px #1720332e; }
+            .appbar .brand { font-size: 1.1em; }
+            .sidebar { position: fixed; top: 0; bottom: 0; left: 0; z-index: 30; width: min(280px, 85vw); min-height: 0; overflow-y: auto; box-shadow: 4px 0 16px #0000004d; transform: translateX(-100%); visibility: hidden; transition: transform .25s ease, visibility 0s linear .25s; }
+            .sidebar nav a { padding: 14px 12px; }
+            .scrim { display: block; position: fixed; inset: 0; z-index: 20; background: #17203399; opacity: 0; visibility: hidden; transition: opacity .25s ease, visibility 0s linear .25s; }
+            body.menu-open { overflow: hidden; }
+            body.menu-open .sidebar { transform: none; visibility: visible; transition: transform .25s ease; }
+            body.menu-open .scrim { opacity: 1; visibility: visible; transition: opacity .25s ease; }
+            main { margin: 18px auto 32px; padding: 0 14px; }
+            h1 { font-size: 1.6em; margin: .4em 0; overflow-wrap: anywhere; }
+            h2 { font-size: 1.25em; }
+            .card, form { padding: 16px; }
+            .card p.muted, .card h2 { overflow-wrap: anywhere; }
+
+            /* Touch targets of about 44px; buttons use the page font. */
+            input, select, textarea, button { font-family: inherit; font-size: inherit; }
+            input, select { min-height: 44px; }
+            button, .button { box-sizing: border-box; min-height: 44px; padding: 11px 16px; line-height: 1.25; text-align: center; }
+            input[type="checkbox"] { width: 20px; height: 20px; min-height: 0; flex: 0 0 auto; }
+
+            /* Title and its buttons stack; the buttons share the width. */
+            .topbar { flex-wrap: wrap; margin-bottom: 16px; }
+            .card.project-list { padding: 4px 0; }
+            form.list-filter label { flex-basis: 100%; }
+            form.list-filter select { flex: 1; min-width: 0; }
+            .project-list a { padding: 14px 16px; }
+            .provider-list a.edit { padding: 14px 16px 14px 4px; }
+            .topbar > :first-child { flex: 1 1 260px; min-width: 0; }
+            .topbar-actions { display: flex; flex-wrap: wrap; gap: 8px; flex: 1 1 100%; }
+            .topbar-actions .button { flex: 1 1 auto; }
+            .form-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 20px; }
+            .form-actions button { flex: 1 1 auto; }
+            .form-actions a { padding: 10px 4px; }
+
+            /* Project page: each task stacks, and + Tempo takes the full width. */
+            .task { flex-direction: column; align-items: stretch; gap: 10px; }
+            .task-side { align-items: stretch; white-space: normal; }
+            .task-side a { display: inline-block; padding: 10px 4px; }
+            form.add-time input { flex: 1; width: auto; min-width: 0; min-height: 44px; padding: 8px 10px; }
+            form.add-time button { min-height: 44px; padding: 8px 14px; }
+            .new-task summary.button { display: block; }
+
+            /* Billing filter: two fields per row; dates side by side. */
+            .filters { grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 0 12px; }
+            .filters .field, .filters .field input { min-width: 0; }
+            .filters .field input { height: 44px; padding: 8px 10px; }
+            fieldset.choices label { padding: 6px 0; margin-right: 16px; }
+            .filters .actions button { width: 100%; }
+
+            /* Small numbers side by side, money values across the card. */
+            .stats { grid-template-columns: 1fr 1fr; gap: 10px; margin: 16px 0; }
+            .stats .stat { padding: 14px 16px; }
+            .stats .stat.wide { grid-column: 1 / -1; }
+            .stat .value { font-size: min(1.5em, 16cqi); }
+            .stat.wide .value { font-size: min(1.5em, 10.5cqi); }
+            .to-pay { flex-direction: column; align-items: stretch; gap: 12px; }
+            .chips { gap: 6px; }
+            .chip { padding: 5px 10px; font-size: .9em; }
+            .dialog-actions { flex-wrap: wrap; }
+            .dialog-actions button { flex: 1 1 auto; }
+
+            /* Tables become one card per row, so every value shows without
+               scrolling sideways. The header stays for screen readers only.
+               The cells are placed and labelled by position (nth-child):
+               keep these in step with the columns in the templates. */
+            table.cards, table.cards tbody, table.cards tfoot { display: block; }
+            table.cards thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+            table.cards tr { display: block; }
+            table.cards td { border-bottom: 0; padding: 0; }
+            table.cards tfoot tr { display: flex; justify-content: space-between; gap: 12px; padding: 10px 0; border-top: 1px solid #e8ebf2; }
+            table.cards tfoot td:first-child { flex: 1; }
+
+            /* Billing: task, project, status, then dates | hours and value. */
+            table.period-tasks tbody tr { display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; padding: 12px 0; border-bottom: 1px solid #e8ebf2; }
+            table.period-tasks tbody td:nth-child(1) { grid-area: 4 / 1; }
+            table.period-tasks tbody td:nth-child(2) { grid-area: 2 / 1 / 3 / 3; font-size: .9em; }
+            table.period-tasks tbody td:nth-child(3) { grid-area: 1 / 1 / 2 / 3; font-weight: 600; }
+            table.period-tasks tbody td:nth-child(4) { grid-area: 3 / 1 / 4 / 3; }
+            table.period-tasks tbody td:nth-child(4) .status { margin: 0 6px 0 0; }
+            table.period-tasks tbody td:nth-child(5) { grid-area: 5 / 1; }
+            table.period-tasks tbody td:nth-child(6) { grid-area: 4 / 2; }
+            table.period-tasks tbody td:nth-child(7) { grid-area: 5 / 2; font-weight: 600; }
+            table.period-tasks tbody td:nth-child(1)::before { content: "{% translate "Início" %} "; color: #667085; }
+            table.period-tasks tbody td:nth-child(5)::before { content: "{% translate "Término" %} "; color: #667085; }
+            table.period-tasks tbody td:nth-child(1), table.period-tasks tbody td:nth-child(5) { font-size: .9em; }
+
+            /* Payments: the period, then one "label .... value" line per column. */
+            table.payments.cards tr.payment { padding-top: 14px; }
+            table.payments.cards tr.payment td { display: block; text-align: right; padding: 3px 0; }
+            table.payments.cards tr.payment td:first-child { text-align: left; font-weight: 600; padding-bottom: 6px; }
+            table.payments.cards tr.payment td:first-child .registered { font-weight: 400; }
+            table.payments.cards td.number::before { float: left; color: #667085; font-weight: 400; }
+            table.payments.cards tr.payment td:nth-child(2)::before { content: "{% translate "Tarefas" %}"; }
+            table.payments.cards tr.payment td:nth-child(3)::before { content: "{% translate "Horas" %}"; }
+            table.payments.cards tr.payment td:nth-child(4)::before, table.payments.cards tfoot td:nth-child(2)::before { content: "{% translate "Estimado" %}"; }
+            table.payments.cards tr.payment td:nth-child(5)::before, table.payments.cards tfoot td:nth-child(3)::before { content: "{% translate "Pago" %}"; }
+            table.payments.cards tr.payment td:nth-child(6)::before, table.payments.cards tfoot td:nth-child(4)::before { content: "{% translate "Diferença" %}"; }
+            table.payments.cards tr.payment-tasks { padding: 4px 0 12px; border-bottom: 1px solid #e8ebf2; }
+            table.payments.cards tr.payment-tasks summary { padding: 8px 0; }
+            table.payments.cards .paid-tasks { grid-template-columns: 1fr; gap: 8px; }
+            table.payments.cards tfoot tr { display: block; }
+            table.payments.cards tfoot td { display: block; text-align: right; padding: 3px 0; }
+            table.payments.cards tfoot td:first-child { text-align: left; padding-bottom: 6px; }
+            .pagination a, .pagination span { min-width: 44px; padding: 11px 12px; }
+
+            .chart { grid-template-rows: 150px auto; }
+
+            .menu-button { display: inline-flex; align-items: center; justify-content: center; width: 48px; height: 48px; min-height: 0; padding: 0; border-radius: 50%; background: transparent; color: white; }
+            .menu-button:hover, .menu-button:active { background: #ffffff1f; }
+            .language { position: fixed; top: 8px; right: 12px; z-index: 11; color: #cbd5f5; }
+            .language-options { border-color: #ffffff40; background: transparent; }
+            .language button { min-height: 40px; padding: 6px 12px; color: #cbd5f5; font-size: .85em; }
+            .language button + button { border-left-color: #ffffff40; }
+            .language button:hover { background: #ffffff14; }
+        }
+        /* After the hover rules, so the current language stays highlighted (a tap
+           leaves touch screens "hovering"). */
+        .language .language-options button.current { background: #335eea; color: white; }
+        @media (max-width: 720px) and (prefers-reduced-motion: reduce) {
+            .sidebar, .scrim, body.menu-open .sidebar, body.menu-open .scrim { transition: none; }
+        }
     </style>
 </head>
 <body>
     <div class="layout">
-        <aside class="sidebar">
+        <header class="appbar">
+            <button type="button" class="menu-button" aria-controls="sidebar" aria-expanded="false" aria-label="{% translate "Abrir menu" %}" data-open-label="{% translate "Abrir menu" %}" data-close-label="{% translate "Fechar menu" %}">
+                <svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+            </button>
+            <strong class="brand">Task Pulse</strong>
+        </header>
+        <aside class="sidebar" id="sidebar">
             <strong class="brand">Task Pulse</strong>
             <nav>
-                <a href="{% url 'tasks:dashboard' %}"{% if request.resolver_match.url_name == "dashboard" %} class="active"{% endif %}>Painel</a>
-                <a href="{% url 'tasks:project_list' %}"{% if request.resolver_match.url_name == "project_list" %} class="active"{% endif %}>Projetos</a>
-                <a href="{% url 'tasks:task_import' %}"{% if request.resolver_match.url_name == "task_import" %} class="active"{% endif %}>Importar tarefas</a>
+                <a href="{% url 'tasks:statistics' %}"{% if request.resolver_match.url_name == "statistics" %} class="active"{% endif %}>{% translate "Estatísticas" %}</a>
+                <a href="{% url 'tasks:billing' %}"{% if request.resolver_match.url_name == "billing" %} class="active"{% endif %}>{% translate "Faturamento" %}</a>
+                <a href="{% url 'tasks:payment_list' %}"{% if request.resolver_match.url_name == "payment_list" %} class="active"{% endif %}>{% translate "Pagamentos" %}</a>
+                <a href="{% url 'tasks:project_list' %}"{% if request.resolver_match.url_name == "project_list" %} class="active"{% endif %}>{% translate "Projetos" %}</a>
+                <a href="{% url 'tasks:provider_list' %}"{% if request.resolver_match.url_name == "provider_list" %} class="active"{% endif %}>{% translate "Empresas" %}</a>
+                <a href="{% url 'tasks:task_import' %}"{% if request.resolver_match.url_name == "task_import" %} class="active"{% endif %}>{% translate "Importar tarefas" %}</a>
             </nav>
         </aside>
+        <div class="scrim"></div>
         <div class="content">
+            {% get_available_languages as languages %}
+            <form class="language" action="{% url 'set_language' %}" method="post">
+                {% csrf_token %}
+                <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M3 12h18M12 3c2.5 2.7 3.8 5.7 3.8 9s-1.3 6.3-3.8 9c-2.5-2.7-3.8-5.7-3.8-9s1.3-6.3 3.8-9z" fill="none" stroke="currentColor" stroke-width="2"/></svg>
+                <span class="language-options" role="group" aria-label="{% translate "Idioma" %}">
+                    {% for code, name in languages %}<button type="submit" name="language" value="{{ code }}" lang="{{ code }}" title="{{ name }}" aria-label="{{ name }}" aria-pressed="{% if code == LANGUAGE_CODE %}true" class="current{% else %}false{% endif %}">{{ code|slice:":2"|upper }}</button>{% endfor %}
+                </span>
+            </form>
             <main>
                 {% if messages %}
                 <ul class="messages">
@@ -86,5 +353,51 @@
             </main>
         </div>
     </div>
+    <script>
+        // Phones: the menu button opens the sidebar as a drawer over the page.
+        // It closes on a tap on the dimmed page, Esc, a swipe to the left or
+        // a link. While it is open, the page behind can't be focused (inert).
+        (function () {
+            var body = document.body;
+            var button = document.querySelector(".menu-button");
+            var sidebar = document.getElementById("sidebar");
+            var content = document.querySelector(".content");
+            function isOpen() {
+                return body.classList.contains("menu-open");
+            }
+            function setOpen(open) {
+                body.classList.toggle("menu-open", open);
+                button.setAttribute("aria-expanded", open ? "true" : "false");
+                button.setAttribute("aria-label", open ? button.dataset.closeLabel : button.dataset.openLabel);
+                content.inert = open;
+                if (open) {
+                    (sidebar.querySelector("a.active") || sidebar.querySelector("a")).focus();
+                }
+            }
+            function close(returnFocus) {
+                if (!isOpen()) { return; }
+                setOpen(false);
+                if (returnFocus) { button.focus(); }
+            }
+            button.addEventListener("click", function () { setOpen(!isOpen()); });
+            document.querySelector(".scrim").addEventListener("click", function () { close(true); });
+            document.addEventListener("keydown", function (event) {
+                if (event.key === "Escape") { close(true); }
+            });
+            sidebar.addEventListener("click", function (event) {
+                if (event.target.closest("a")) { close(false); }
+            });
+            // Turning the phone or widening the window to the desktop layout.
+            window.matchMedia("(max-width: 720px)").addEventListener("change", function () { close(false); });
+            var startX = null;
+            sidebar.addEventListener("touchstart", function (event) {
+                startX = event.touches[0].clientX;
+            }, {passive: true});
+            sidebar.addEventListener("touchend", function (event) {
+                if (startX !== null && startX - event.changedTouches[0].clientX > 60) { close(true); }
+                startX = null;
+            });
+        })();
+    </script>
 </body>
 </html>

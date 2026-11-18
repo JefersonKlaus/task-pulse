@@ -1,24 +1,25 @@
 from django import forms
 from django.core.exceptions import ValidationError
+from django.utils.translation import gettext_lazy as _
 
 from ..domain.task_status import TaskStatus
 from ..models import Task
 from .fields import HoursMinutesField, date_input
 
 LABELS = {
-    "name": "Nome da tarefa",
-    "external_id": "ID externo",
-    "description": "Descrição (objetivos)",
-    "acceptance_criteria": "Como validar a conclusão",
-    "status": "Status",
-    "started_on": "Início",
-    "finished_on": "Término",
+    "name": _("Nome da tarefa"),
+    "external_id": _("ID externo"),
+    "description": _("Descrição (objetivos)"),
+    "acceptance_criteria": _("Como validar a conclusão"),
+    "status": _("Status"),
+    "started_on": _("Início"),
+    "finished_on": _("Término"),
 }
 
 WIDGETS = {
     "description": forms.Textarea(attrs={"rows": 3}),
     "acceptance_criteria": forms.Textarea(
-        attrs={"rows": 3, "placeholder": "Ex.: os testes de login passam"}
+        attrs={"rows": 3, "placeholder": _("Ex.: os testes de login passam")}
     ),
     "started_on": date_input(),
     "finished_on": date_input(),
@@ -48,14 +49,14 @@ class TaskUpdateForm(forms.ModelForm):
     LOCKED_WHILE_DOING = ("finished_on",)
 
     minutes_spent = HoursMinutesField(
-        label="Tempo total",
-        help_text="Apague e digite o total correto, se precisar corrigir.",
+        label=_("Tempo total"),
+        help_text=_("Apague e digite o total correto, se precisar corrigir."),
     )
     add_time = HoursMinutesField(
-        label="Adicionar tempo",
+        label=_("Adicionar tempo"),
         required=False,
         allow_zero=False,
-        help_text="Somado ao tempo total ao salvar.",
+        help_text=_("Somado ao tempo total ao salvar."),
     )
 
     class Meta:
@@ -74,7 +75,7 @@ class TaskUpdateForm(forms.ModelForm):
         labels = LABELS
         widgets = WIDGETS
         help_texts = {
-            "finished_on": (
+            "finished_on": _(
                 "Preenchida automaticamente ao mudar o status para Review ou "
                 "Done. Só pode ser informada quando o status não é Doing."
             ),
@@ -106,7 +107,7 @@ class TaskUpdateForm(forms.ModelForm):
         )
         if duplicate:
             raise ValidationError(
-                "Já existe uma tarefa com este ID externo neste projeto."
+                _("Já existe uma tarefa com este ID externo neste projeto.")
             )
         return external_id
 
@@ -122,4 +123,4 @@ class TaskUpdateForm(forms.ModelForm):
 class TaskAddTimeForm(forms.Form):
     """Quick "add time" box next to each task on the project page."""
 
-    time = HoursMinutesField(label="Adicionar tempo", allow_zero=False)
+    time = HoursMinutesField(label=_("Adicionar tempo"), allow_zero=False)

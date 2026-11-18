@@ -4,16 +4,16 @@ from decimal import Decimal
 from django.test import SimpleTestCase
 
 from src.domain.pricing import Pricing
-from src.forms import DashboardForm
+from src.forms import BillingForm
 
 ALL_STATUSES = ["DOING", "REVIEW", "DONE", "REJECTED"]
 
 
 def form(**data):
-    return DashboardForm(data={"inicio": "2026-11-01", "fim": "2026-11-30", **data})
+    return BillingForm(data={"inicio": "2026-11-01", "fim": "2026-11-30", **data})
 
 
-class DashboardFormTests(SimpleTestCase):
+class BillingFormTests(SimpleTestCase):
     def test_end_before_start_is_rejected(self):
         self.assertEqual(
             form(fim="2026-10-31").errors["fim"],
@@ -42,9 +42,22 @@ class DashboardFormTests(SimpleTestCase):
 
     def test_first_visit_is_this_month_with_every_status(self):
         self.assertEqual(
-            DashboardForm.initial_data(date(2026, 2, 10)),
-            {"inicio": "2026-02-01", "fim": "2026-02-28", "status": ALL_STATUSES},
+            BillingForm.initial_data(date(2026, 2, 10)),
+            {
+                "inicio": "2026-02-01",
+                "fim": "2026-02-28",
+                "status": ALL_STATUSES,
+                "pagas": True,
+            },
         )
+
+    def test_paid_tasks_are_included_only_when_checked(self):
+        # A browser sends nothing for an unchecked box.
+        for data, included in (({}, False), ({"pagas": "on"}, True)):
+            valid = form(**data)
+            with self.subTest(data=data):
+                self.assertTrue(valid.is_valid(), valid.errors)
+                self.assertIs(valid.cleaned_data["pagas"], included)
 
     def test_pricing_from_the_rates(self):
         without_rate, with_rates = form(), form(

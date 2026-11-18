@@ -5,8 +5,8 @@ from django.test import TestCase
 
 from src.domain.pricing import Pricing
 from src.integrations.exchange_rates import ExchangeRate, ExchangeRateUnavailable
-from src.services.dashboard import build_dashboard
-from tests.factories import create_project, create_task
+from src.services.billing import build_billing
+from tests.factories import create_payment, create_project, create_task
 
 ALL = ["DOING", "REVIEW", "DONE", "REJECTED"]
 RATE = ExchangeRate(rate=Decimal("5.35"), quoted_at="2026-11-16 10:00:00")
@@ -26,7 +26,7 @@ class FakeExchangeRates:
 
 
 def build(statuses=ALL, pricing=None, exchange_rates=None):
-    return build_dashboard(
+    return build_billing(
         start=date(2026, 11, 1),
         end=date(2026, 11, 30),
         statuses=statuses,
@@ -39,7 +39,7 @@ def names(report):
     return sorted(line.task.name for line in report.summary.lines)
 
 
-class BuildDashboardTasksTests(TestCase):
+class BuildBillingTasksTests(TestCase):
     """Which tasks are listed and calculated."""
 
     def setUp(self):
@@ -69,7 +69,7 @@ class BuildDashboardTasksTests(TestCase):
         )
 
 
-class BuildDashboardExchangeRateTests(TestCase):
+class BuildBillingExchangeRateTests(TestCase):
     """The dollar total is converted to reais, when there is one."""
 
     def setUp(self):
@@ -93,7 +93,7 @@ class BuildDashboardExchangeRateTests(TestCase):
         )
 
     def test_unavailable_rate_keeps_the_dollar_total_and_is_logged(self):
-        with self.assertLogs("src.services.dashboard", "WARNING") as logs:
+        with self.assertLogs("src.services.billing", "WARNING") as logs:
             report = build(
                 pricing=Pricing(Decimal("90")),
                 exchange_rates=FakeExchangeRates(error=ExchangeRateUnavailable("x")),
@@ -107,3 +107,70 @@ class BuildDashboardExchangeRateTests(TestCase):
             (Decimal("450.00"), None, True),
         )
         self.assertIn("USD/BRL exchange rate unavailable", logs.output[0])
+
+
+class BuildBillingToPayTests(TestCase):
+    """What is still to pay: the listed tasks that are not paid yet."""
+
+    def setUp(self):
+        project = create_project()
+        self.login = create_task(
+            project,
+            name="Login",
+            status="DONE",
+            minutes_spent=300,
+            started_on=date(2026, 11, 3),
+        )
+        self.api = create_task(
+            project,
+            name="API",
+            status="DONE",
+            minutes_spent=60,
+            started_on=date(2026, 11, 4),
+        )
+        create_payment(self.api)
+
+    def test_unpaid_tasks_are_priced_with_the_bonus(self):
+        report = build(pricing=Pricing(Decimal("90"), Decimal("100"), Decimal("40")))
+        self.assertEqual(names(report), ["API", "Login"])  # both still listed
+        self.assertEqual(report.paid_tasks, 1)
+        self.assertEqual([line.task for line in report.to_pay.lines], [self.login])
+        # Login: 4 x 90 + 100 = 460, + bonus 40 = 500; x 5.35
+        self.assertEqual(
+            (report.to_pay.total_usd, report.to_pay_brl),
+            (Decimal("500.00"), Decimal("2675.00")),
+        )
+
+    def test_paid_tasks_can_be_left_out_of_the_list_and_totals(self):
+        report = build_billing(
+            start=date(2026, 11, 1),
+            end=date(2026, 11, 30),
+            statuses=ALL,
+            pricing=Pricing(Decimal("90")),
+            exchange_rates=FakeExchangeRates(),
+            include_paid=False,
+        )
+        self.assertEqual(names(report), ["Login"])
+        self.assertEqual(
+            (report.summary.minutes, report.summary.total_usd, report.paid_tasks),
+            (300, Decimal("450.00"), 0),
+        )
+        self.assertEqual([line.task for line in report.to_pay.lines], [self.login])
+
+    def test_nothing_to_pay_when_every_task_is_paid(self):
+        create_payment(self.login)
+        report = build(pricing=Pricing(Decimal("90")))
+        self.assertEqual((report.to_pay, report.to_pay_brl), (None, None))
+
+    def test_nothing_to_pay_without_pricing(self):
+        self.assertIsNone(build().to_pay)
+
+    def test_without_a_rate_the_estimate_in_reais_is_unknown(self):
+        with self.assertLogs("src.services.billing", "WARNING"):
+            report = build(
+                pricing=Pricing(Decimal("90")),
+                exchange_rates=FakeExchangeRates(error=ExchangeRateUnavailable("x")),
+            )
+        self.assertEqual(
+            (report.to_pay.total_usd, report.to_pay_brl), (Decimal("450.00"), None)
+        )

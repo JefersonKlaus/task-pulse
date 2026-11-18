@@ -1,32 +1,40 @@
 {% extends "tasks/base.html" %}
-{% block title %}Importar tarefas | Task Pulse{% endblock %}
+{% load i18n %}
+{% block title %}{% translate "Importar tarefas" %} | Task Pulse{% endblock %}
 {% block content %}
-<h1>Importar tarefas</h1>
-<p class="muted">Envie um arquivo CSV com uma tarefa por linha. Tarefas cujo id já existe no projeto são atualizadas; as outras são criadas.</p>
+<h1>{% translate "Importar tarefas" %}</h1>
+<p class="muted">{% translate "Envie um arquivo CSV com uma tarefa por linha. Linhas cujo id já existe no projeto são ignoradas (a tarefa fica como está); as outras são criadas." %}</p>
 <div class="card">
-    <h2>Formato do arquivo</h2>
-    <pre class="sample">date;id;time;desc;status
-16/11/2026;TP-101;3,8;Tela de login;DONE
-17/11/2026;TP-102;1,5;API de tarefas;DOING</pre>
+    <h2>{% translate "Formato do arquivo" %}</h2>
+    <pre class="sample">date;id;time;desc;status;github
+16/11/2026;TP-101;3,8;{% translate "Tela de login" %};DONE;acme/portal
+17/11/2026;TP-102;1,5;{% translate "API de tarefas" %};DOING;https://github.com/acme/api
+18/11/2026;TP-103;2:00;{% translate "Revisão do layout" %};REVIEW;</pre>
     <ul class="muted">
-        <li><strong>date</strong>: dd/mm/aaaa ou aaaa-mm-dd. É o início da tarefa, e também o término quando o status não é DOING.</li>
-        <li><strong>id</strong>: identificador da tarefa no sistema de origem. Obrigatório e único no arquivo.</li>
-        <li><strong>time</strong>: horas com vírgula ou ponto (3,8 = 3:48), ou H:MM. Vazio = 0.</li>
-        <li><strong>desc</strong>: nome da tarefa.</li>
-        <li><strong>status</strong>: DOING, REVIEW, DONE ou REJECTED. Vazio = DOING.</li>
+        <li>{% blocktranslate %}<strong>date</strong>: dd/mm/aaaa ou aaaa-mm-dd. É o início da tarefa, e também o término quando o status não é DOING.{% endblocktranslate %}</li>
+        <li>{% blocktranslate %}<strong>id</strong>: identificador da tarefa no sistema de origem. Obrigatório e único por projeto no arquivo.{% endblocktranslate %}</li>
+        <li>{% blocktranslate %}<strong>time</strong>: horas com vírgula ou ponto (3,8 = 3:48), ou H:MM. Vazio = 0.{% endblocktranslate %}</li>
+        <li>{% blocktranslate %}<strong>desc</strong>: nome da tarefa.{% endblocktranslate %}</li>
+        <li>{% blocktranslate %}<strong>status</strong>: DOING, REVIEW, DONE ou REJECTED. Vazio = DOING.{% endblocktranslate %}</li>
+        <li>{% blocktranslate %}<strong>github</strong> (coluna opcional): o repositório do projeto da tarefa, como <code>dono/repositorio</code> ou a URL. A tarefa vai para o projeto desse repositório, que é criado se ainda não existir. Vazio = o projeto escolhido abaixo.{% endblocktranslate %}</li>
     </ul>
-    <p class="muted">Separador <code>;</code>, <code>,</code> ou tab. Se alguma linha tiver erro, nada é importado.</p>
+    <p class="muted">{% blocktranslate %}Separador <code>;</code>, <code>,</code> ou tab. Se alguma linha tiver erro, nada é importado.{% endblocktranslate %}</p>
 </div>
 <form method="post" enctype="multipart/form-data" style="margin-top: 20px">
     {% csrf_token %}
     {{ form.non_field_errors }}
     {% include "tasks/_field.html" with field=form.file %}
-    {% include "tasks/_field.html" with field=form.project %}
-    <div id="new-project-fields">
-        {% include "tasks/_field.html" with field=form.new_project_url %}
-        {% include "tasks/_field.html" with field=form.new_project_name %}
-    </div>
-    <p><button type="submit">Importar</button> <a href="{% url 'tasks:project_list' %}">Cancelar</a></p>
+    <fieldset class="destination" aria-describedby="destination-help">
+        <legend>{% translate "Projeto das linhas sem github" %}</legend>
+        <p class="muted" id="destination-help">{% blocktranslate %}As linhas com <strong>github</strong> no arquivo vão para o projeto desse repositório (criado se ainda não existir). O projeto abaixo recebe só as linhas <strong>sem github</strong> — ou todas, se o arquivo não tiver essa coluna. Se todas as linhas tiverem github, deixe em branco.{% endblocktranslate %}</p>
+        {% include "tasks/_field.html" with field=form.project %}
+        <div id="new-project-fields">
+            {% include "tasks/_field.html" with field=form.new_project_url %}
+            {% include "tasks/_field.html" with field=form.new_project_name %}
+        </div>
+    </fieldset>
+    {% include "tasks/_field.html" with field=form.provider %}
+    <p class="form-actions"><button type="submit">{% translate "Importar" %}</button> <a href="{% url 'tasks:project_list' %}">{% translate "Cancelar" %}</a></p>
 </form>
 <script>
     // The new-project fields only matter when "+ Criar novo projeto" is chosen.

@@ -1,0 +1,1010 @@
+# English translation of Task Pulse. The source language is Portuguese.
+# Update with: python manage.py makemessages -l en (then translate the new
+# entries) and python manage.py compilemessages. See the README.
+msgid ""
+msgstr ""
+"Project-Id-Version: Task Pulse\n"
+"Report-Msgid-Bugs-To: \n"
+"Language: en\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+msgid "%(counter)s concluída (Done)"
+msgid_plural "%(counter)s concluídas (Done)"
+msgstr[0] "%(counter)s completed (Done)"
+msgstr[1] "%(counter)s completed (Done)"
+
+msgid "%(counter)s pagamento"
+msgid_plural "%(counter)s pagamentos"
+msgstr[0] "%(counter)s payment"
+msgstr[1] "%(counter)s payments"
+
+msgid "%(counter)s projeto"
+msgid_plural "%(counter)s projetos"
+msgstr[0] "%(counter)s project"
+msgstr[1] "%(counter)s projects"
+
+msgid "%(counter)s tarefa"
+msgid_plural "%(counter)s tarefas"
+msgstr[0] "%(counter)s task"
+msgstr[1] "%(counter)s tasks"
+
+msgid ""
+"%(counter)s tarefa não paga é de um projeto sem empresa e não pode ser paga. "
+"<a href=\"%(projects_url)s\">Defina a empresa do projeto</a>."
+msgid_plural ""
+"%(counter)s tarefas não pagas são de projetos sem empresa e não podem ser "
+"pagas. <a href=\"%(projects_url)s\">Defina a empresa dos projetos</a>."
+msgstr[0] ""
+"%(counter)s unpaid task is from a project without a company and can't be "
+"paid. <a href=\"%(projects_url)s\">Set the project's company</a>."
+msgstr[1] ""
+"%(counter)s unpaid tasks are from projects without a company and can't be "
+"paid. <a href=\"%(projects_url)s\">Set the projects' company</a>."
+
+#, python-format
+msgid "%(hours)s não pagas"
+msgstr "%(hours)s unpaid"
+
+#, python-format
+msgid ""
+"%(lines)s linha(s) processada(s) em %(projects)s projetos — %(results)s (id "
+"já existente no projeto)."
+msgstr ""
+"%(lines)s line(s) processed in %(projects)s projects — %(results)s (id "
+"already in the project)."
+
+#, python-format
+msgid ""
+"%(lines)s linha(s) processada(s) em %(results)s (id já existente no projeto)."
+msgstr ""
+"%(lines)s line(s) processed in %(results)s (id already in the project)."
+
+#, python-format
+msgid "%(time)s adicionado a “%(task)s”. Total: %(total)s."
+msgstr "%(time)s added to “%(task)s”. Total: %(total)s."
+
+msgid "(%(counter)s já paga fica de fora)"
+msgid_plural "(%(counter)s já pagas ficam de fora)"
+msgstr[0] "(%(counter)s already paid is left out)"
+msgstr[1] "(%(counter)s already paid are left out)"
+
+msgid "+ Criar novo projeto"
+msgstr "+ Create a new project"
+
+msgid "+ Tempo"
+msgstr "+ Time"
+
+#, python-format
+msgid "<span class=\"nowrap\">%(start)s</span> a <span class=\"nowrap\">%(end)s</span>"
+msgstr ""
+"<span class=\"nowrap\">%(start)s</span> to <span "
+"class=\"nowrap\">%(end)s</span>"
+
+msgid ""
+"<strong>date</strong>: dd/mm/aaaa ou aaaa-mm-dd. É o início da tarefa, e "
+"também o término quando o status não é DOING."
+msgstr ""
+"<strong>date</strong>: dd/mm/yyyy or yyyy-mm-dd. The task's start, and also "
+"its finish when the status is not DOING."
+
+msgid "<strong>desc</strong>: nome da tarefa."
+msgstr "<strong>desc</strong>: the task name."
+
+msgid ""
+"<strong>github</strong> (coluna opcional): o repositório do projeto da "
+"tarefa, como <code>dono/repositorio</code> ou a URL. A tarefa vai para o "
+"projeto desse repositório, que é criado se ainda não existir. Vazio = o "
+"projeto escolhido abaixo."
+msgstr ""
+"<strong>github</strong> (optional column): the repository of the task's "
+"project, as <code>owner/repository</code> or its URL. The task goes to that "
+"repository's project, which is created if it doesn't exist yet. Blank = the "
+"project chosen below."
+
+msgid ""
+"<strong>id</strong>: identificador da tarefa no sistema de origem. "
+"Obrigatório e único por projeto no arquivo."
+msgstr ""
+"<strong>id</strong>: the task's id in the source system. Required, and unique"
+" per project in the file."
+
+msgid ""
+"<strong>status</strong>: DOING, REVIEW, DONE ou REJECTED. Vazio = DOING."
+msgstr ""
+"<strong>status</strong>: DOING, REVIEW, DONE or REJECTED. Blank = DOING."
+
+msgid ""
+"<strong>time</strong>: horas com vírgula ou ponto (3,8 = 3:48), ou H:MM. "
+"Vazio = 0."
+msgstr ""
+"<strong>time</strong>: hours with a comma or a dot (3,8 = 3:48), or H:MM. "
+"Blank = 0."
+
+msgid "A data de término não pode ser anterior ao início."
+msgstr "The finish date can't be before the start."
+
+msgid "A data final não pode ser anterior à inicial."
+msgstr "The end date can't be before the start date."
+
+#, python-format
+msgid ""
+"A empresa não está na lista? <a href=\"%(new_provider)s\">Cadastre uma "
+"empresa</a>."
+msgstr ""
+"The company isn't on the list? <a href=\"%(new_provider)s\">Add a "
+"company</a>."
+
+msgid ""
+"A lista de tarefas a pagar mudou desde que o pagamento foi aberto. Confira os"
+" valores e tente de novo."
+msgstr ""
+"The list of tasks to pay changed since the payment was opened. Check the "
+"values and try again."
+
+msgid "A pagar:"
+msgstr "To pay:"
+
+msgid "A tarefa começa como Doing, com início hoje."
+msgstr "The task starts as Doing, starting today."
+
+msgid "API de tarefas"
+msgstr "Tasks API"
+
+msgid "Abrir menu"
+msgstr "Open menu"
+
+msgid "Adicionar tempo"
+msgstr "Add time"
+
+#, python-format
+msgid "Adicionar tempo a %(name)s"
+msgstr "Add time to %(name)s"
+
+msgid "Agrupar por"
+msgstr "Group by"
+
+msgid "Ainda não há tarefas neste projeto."
+msgstr "There are no tasks in this project yet."
+
+msgid "Apague e digite o total correto, se precisar corrigir."
+msgstr "Erase it and type the right total, if it needs fixing."
+
+msgid "Arquivo CSV"
+msgstr "CSV file"
+
+msgid ""
+"As empresas para quem você trabalha. Cada projeto pertence a uma, e os "
+"relatórios podem ser filtrados por empresa."
+msgstr ""
+"The companies you work for. Each project belongs to one, and the reports can "
+"be filtered by company."
+
+msgid ""
+"As linhas com <strong>github</strong> no arquivo vão para o projeto desse "
+"repositório (criado se ainda não existir). O projeto abaixo recebe só as "
+"linhas <strong>sem github</strong> — ou todas, se o arquivo não tiver essa "
+"coluna. Se todas as linhas tiverem github, deixe em branco."
+msgstr ""
+"Lines with <strong>github</strong> in the file go to that repository's "
+"project (created if it doesn't exist yet). The project below only receives "
+"the lines <strong>without github</strong> — or all of them, if the file has "
+"no such column. If every line has github, leave it blank."
+
+msgid ""
+"As tarefas entram no período pela data de início; só os status marcados são "
+"listados e calculados. Cada hora vale o valor/h; a última hora de cada tarefa"
+" não rejeitada vale o valor flat, se informado. O bônus é somado uma vez ao "
+"total."
+msgstr ""
+"Tasks belong to the period of their start date; only the checked statuses are"
+" listed and calculated. Each hour is worth the rate/h; the last hour of each "
+"task that was not rejected is worth the flat rate, if given. The bonus is "
+"added once to the total."
+
+msgid ""
+"As tarefas entram pela data de início, como no Faturamento; o dinheiro, pela "
+"data em que o pagamento foi registrado. A média por hora divide o recebido "
+"pelas horas das tarefas desses pagamentos."
+msgstr ""
+"Tasks count by their start date, as in Billing; money, by the date the "
+"payment was registered. The average per hour divides what was received by the"
+" hours of those payments' tasks."
+
+msgid ""
+"As tarefas já pagas estão ocultas. Marque “Incluir tarefas pagas” para vê-las"
+" junto com as demais."
+msgstr ""
+"Tasks already paid are hidden. Check “Include paid tasks” to see them with "
+"the others."
+
+msgid "Atualizar"
+msgstr "Update"
+
+msgid "Até"
+msgstr "To"
+
+msgid "Bônus"
+msgstr "Bonus"
+
+msgid "Bônus (US$)"
+msgstr "Bonus (US$)"
+
+msgid "Cadastre a primeira empresa"
+msgstr "Add the first company"
+
+msgid "Cadastre o primeiro projeto"
+msgstr "Add the first project"
+
+msgid "Cancelar"
+msgstr "Cancel"
+
+#, python-format
+msgid ""
+"Colunas obrigatórias ausentes: %(missing)s. O cabeçalho deve ter: "
+"%(required)s."
+msgstr ""
+"Required columns missing: %(missing)s. The header must have: %(required)s."
+
+msgid ""
+"Colunas: date, id, time, desc, status e, opcional, github. Separador ; , ou "
+"tab."
+msgstr ""
+"Columns: date, id, time, desc, status and, optionally, github. Separator ; , "
+"or tab."
+
+msgid "Como julgar que a tarefa está concluída (como testá-la)."
+msgstr "How to judge that the task is complete (how to test it)."
+
+msgid "Como validar a conclusão"
+msgstr "How to validate it"
+
+msgid "Como validar:"
+msgstr "How to validate:"
+
+msgid "Concluídas"
+msgstr "Completed"
+
+msgid "Confirmar pagamento"
+msgstr "Confirm payment"
+
+#, python-format
+msgid "Cotação %(rate)s"
+msgstr "Rate %(rate)s"
+
+#, python-format
+msgid "Cotação %(rate)s em %(when)s"
+msgstr "Rate %(rate)s on %(when)s"
+
+msgid ""
+"Cotação do dólar indisponível no momento; o total em reais não pôde ser "
+"calculado. Tente de novo em alguns minutos."
+msgstr ""
+"The dollar rate is unavailable right now; the total in reais could not be "
+"calculated. Try again in a few minutes."
+
+msgid "Criar empresa"
+msgstr "Create company"
+
+msgid "Criar projeto"
+msgstr "Create project"
+
+msgid "Criar tarefa"
+msgstr "Create task"
+
+msgid "Data de criação da tarefa; pode ser corrigida."
+msgstr "The date the task was created; it can be corrected."
+
+msgid "De"
+msgstr "From"
+
+msgid "Descrição"
+msgstr "Description"
+
+msgid "Descrição (objetivos)"
+msgstr "Description (goals)"
+
+msgid "Desmarcado: as tarefas já pagas não são listadas nem calculadas."
+msgstr "Unchecked: tasks already paid are neither listed nor calculated."
+
+msgid "Diferença"
+msgstr "Difference"
+
+msgid "Doing"
+msgstr "Doing"
+
+msgid "Done"
+msgstr "Done"
+
+msgid "Editar"
+msgstr "Edit"
+
+#, python-format
+msgid "Editar %(name)s"
+msgstr "Edit %(name)s"
+
+msgid "Editar empresa"
+msgstr "Edit company"
+
+msgid "Editar projeto"
+msgstr "Edit project"
+
+msgid "Editar tarefa"
+msgstr "Edit task"
+
+msgid "Empresa"
+msgstr "Company"
+
+msgid "Empresa dos projetos novos"
+msgstr "Company of the new projects"
+
+msgid "Empresas"
+msgstr "Companies"
+
+msgid ""
+"Envie um arquivo CSV com uma tarefa por linha. Linhas cujo id já existe no "
+"projeto são ignoradas (a tarefa fica como está); as outras são criadas."
+msgstr ""
+"Upload a CSV file with one task per line. Lines whose id already exists in "
+"the project are skipped (the task stays as it is); the others are created."
+
+msgid "Escolha a empresa"
+msgstr "Choose the company"
+
+msgid "Escolha a empresa dos projetos que serão criados."
+msgstr "Choose the company of the projects that will be created."
+
+msgid "Escolha a empresa que está pagando."
+msgstr "Choose the company that is paying."
+
+msgid "Estatísticas"
+msgstr "Statistics"
+
+msgid "Estimado"
+msgstr "Estimated"
+
+msgid "Estimado em dólar"
+msgstr "Estimated in dollars"
+
+msgid "Estimado em real"
+msgstr "Estimated in reais"
+
+msgid "Ex.: 100.00"
+msgstr "E.g. 100.00"
+
+msgid "Ex.: 3397.25"
+msgstr "E.g. 3397.25"
+
+msgid "Ex.: 50.00"
+msgstr "E.g. 50.00"
+
+msgid "Ex.: 635.00"
+msgstr "E.g. 635.00"
+
+msgid "Ex.: 90.00"
+msgstr "E.g. 90.00"
+
+msgid "Ex.: Alignerr"
+msgstr "E.g. Alignerr"
+
+msgid "Ex.: Portal web"
+msgstr "E.g. Web portal"
+
+msgid "Ex.: os testes de login passam"
+msgstr "E.g. the login tests pass"
+
+msgid "Exportar CSV"
+msgstr "Export CSV"
+
+msgid "Faturamento"
+msgstr "Billing"
+
+msgid "Fechar menu"
+msgstr "Close menu"
+
+msgid "Filtrar"
+msgstr "Filter"
+
+msgid "Formato H:MM, por exemplo 1:30"
+msgstr "Format H:MM, for example 1:30"
+
+msgid "Formato do arquivo"
+msgstr "File format"
+
+msgid "Horas"
+msgstr "Hours"
+
+msgid "Horas por empresa"
+msgstr "Hours by company"
+
+msgid "Horas por projeto"
+msgstr "Hours by project"
+
+msgid "Horas trabalhadas"
+msgstr "Hours worked"
+
+msgid "ID externo"
+msgstr "External ID"
+
+msgid "Identificador da tarefa no sistema de origem."
+msgstr "The task's id in the source system."
+
+msgid "Idioma"
+msgstr "Language"
+
+msgid "Importar"
+msgstr "Import"
+
+msgid "Importar tarefas"
+msgstr "Import tasks"
+
+msgid "Incluir tarefas pagas"
+msgstr "Include paid tasks"
+
+msgid "Informe a URL do repositório git. O nome é opcional."
+msgstr "Enter the git repository URL. The name is optional."
+
+msgid ""
+"Informe a URL para criar um projeto novo, ou escolha um projeto existente "
+"para as linhas sem github."
+msgstr ""
+"Enter the URL to create a new project, or choose an existing project for the "
+"lines without github."
+
+msgid ""
+"Informe a URL para criar um projeto novo, ou escolha um projeto existente."
+msgstr "Enter the URL to create a new project, or choose an existing project."
+
+msgid "Informe o valor/h para usar o bônus."
+msgstr "Enter the rate/h to use the bonus."
+
+msgid "Informe o valor/h para usar o valor flat."
+msgstr "Enter the rate/h to use the flat rate."
+
+msgid "Informe um tempo maior que 0:00."
+msgstr "Enter a time greater than 0:00."
+
+msgid "Início"
+msgstr "Start"
+
+#, python-format
+msgid "Início: %(day)s"
+msgstr "Start: %(day)s"
+
+msgid "Já existe uma empresa com este nome."
+msgstr "A company with this name already exists."
+
+msgid "Já existe uma tarefa com este ID externo neste projeto."
+msgstr "A task with this external ID already exists in this project."
+
+#, python-format
+msgid "Linha %(line)s: %(problems)s."
+msgstr "Line %(line)s: %(problems)s."
+
+msgid "Lista de ids inválida."
+msgstr "Invalid list of ids."
+
+#, python-format
+msgid "Mostrando %(first)s–%(last)s de %(total)s pagamentos."
+msgstr "Showing %(first)s–%(last)s of %(total)s payments."
+
+msgid "Média por hora paga"
+msgstr "Average per paid hour"
+
+msgid "Mês"
+msgstr "Month"
+
+msgid "Nenhum pagamento desta empresa."
+msgstr "No payments from this company."
+
+msgid "Nenhum pagamento registrado."
+msgstr "No payments registered."
+
+msgid "Nenhum projeto cadastrado."
+msgstr "No projects yet."
+
+msgid "Nenhum projeto desta empresa."
+msgstr "No projects of this company."
+
+msgid "Nenhuma empresa cadastrada."
+msgstr "No companies yet."
+
+msgid "Nenhuma tarefa com os status escolhidos iniciada neste período."
+msgstr "No task with the chosen statuses started in this period."
+
+msgid "Nenhuma tarefa iniciada no período."
+msgstr "No task started in the period."
+
+msgid "Nenhuma tarefa ou pagamento neste período."
+msgstr "No tasks or payments in this period."
+
+msgid "Nome da empresa"
+msgstr "Company name"
+
+msgid "Nome da tarefa"
+msgstr "Task name"
+
+msgid "Nome do novo projeto"
+msgstr "Name of the new project"
+
+msgid "Nome do projeto"
+msgstr "Project name"
+
+msgid "Nova empresa"
+msgstr "New company"
+
+msgid "Nova tarefa"
+msgstr "New task"
+
+msgid "Novo projeto"
+msgstr "New project"
+
+msgid "Não há tarefas a pagar com este filtro."
+msgstr "There are no tasks to pay with this filter."
+
+msgid "Não há tarefas a pagar."
+msgstr "There are no tasks to pay."
+
+msgid "Não pagas"
+msgstr "Unpaid"
+
+msgid "O arquivo está vazio."
+msgstr "The file is empty."
+
+msgid "O arquivo não tem linhas de tarefas."
+msgstr "The file has no task lines."
+
+msgid "O arquivo tem mais de 2 MB."
+msgstr "The file is larger than 2 MB."
+
+msgid "Objetivos da tarefa."
+msgstr "The task's goals."
+
+msgid "Objetivos:"
+msgstr "Goals:"
+
+msgid ""
+"Obrigatória quando a importação cria projetos: o novo projeto acima e os "
+"repositórios da coluna github que ainda não existem. Os projetos existentes "
+"mantêm a sua."
+msgstr ""
+"Required when the import creates projects: the new project above and the "
+"repositories of the github column that don't exist yet. Existing projects "
+"keep theirs."
+
+msgid "Opcional. Se ficar em branco, usa o nome do repositório da URL."
+msgstr "Optional. If left blank, the repository name from the URL is used."
+
+msgid "Organize suas tarefas por projeto."
+msgstr "Organize your tasks by project."
+
+msgid "Outros"
+msgstr "Others"
+
+msgid "Pagamento"
+msgstr "Payment"
+
+#, python-format
+msgid "Pagamento de %(start)s a %(end)s"
+msgstr "Payment from %(start)s to %(end)s"
+
+#, python-format
+msgid "Pagamento registrado: %(count)s tarefa(s), %(usd)s e %(brl)s."
+msgstr "Payment registered: %(count)s task(s), %(usd)s and %(brl)s."
+
+msgid "Pagamentos"
+msgstr "Payments"
+
+msgid ""
+"Pagamentos registrados pelo botão Pagar do Faturamento, do mais recente ao "
+"mais antigo."
+msgstr "Payments registered with the Pay button in Billing, newest first."
+
+msgid "Pagar"
+msgstr "Pay"
+
+msgid "Pagas"
+msgstr "Paid"
+
+msgid "Pago"
+msgstr "Paid"
+
+msgid "Pago (R$)"
+msgstr "Paid (R$)"
+
+msgid "Pago (US$)"
+msgstr "Paid (US$)"
+
+msgid ""
+"Para registrar o pagamento, escolha no filtro a empresa que está pagando."
+msgstr ""
+"To register the payment, choose in the filter the company that is paying."
+
+msgid "Período"
+msgstr "Period"
+
+#, python-format
+msgid ""
+"Período de %(start)s a %(end)s. As tarefas a pagar serão marcadas como pagas."
+msgstr ""
+"Period from %(start)s to %(end)s. The tasks to pay will be marked as paid."
+
+#, python-format
+msgid "Período longo demais: escolha até %(max)s meses."
+msgstr "Period too long: choose up to %(max)s months."
+
+#, python-format
+msgid "Período longo demais: escolha até %(max)s semanas ou agrupe por mês."
+msgstr "Period too long: choose up to %(max)s weeks or group by month."
+
+msgid "Por mês de início das tarefas."
+msgstr "By month the tasks started."
+
+msgid "Por mês de início, por status."
+msgstr "By month they started, by status."
+
+msgid "Por mês em que o pagamento foi registrado."
+msgstr "By month the payment was registered."
+
+msgid "Por semana de início das tarefas."
+msgstr "By week the tasks started."
+
+msgid "Por semana de início, por status."
+msgstr "By week they started, by status."
+
+msgid "Por semana em que o pagamento foi registrado."
+msgstr "By week the payment was registered."
+
+msgid "Preenchida ao mudar o status para Review ou Done; pode ser corrigida."
+msgstr ""
+"Filled in when the status changes to Review or Done; it can be corrected."
+
+msgid ""
+"Preenchida automaticamente ao mudar o status para Review ou Done. Só pode ser"
+" informada quando o status não é Doing."
+msgstr ""
+"Filled in automatically when the status changes to Review or Done. It can "
+"only be entered when the status is not Doing."
+
+msgid "Projeto"
+msgstr "Project"
+
+msgid "Projeto das linhas sem github"
+msgstr "Project for the lines without github"
+
+msgid "Projetos"
+msgstr "Projects"
+
+msgid "Próxima ›"
+msgstr "Next ›"
+
+msgid "Páginas de pagamentos"
+msgstr "Pages of payments"
+
+msgid "Recebido"
+msgstr "Received"
+
+msgid "Recebido (US$)"
+msgstr "Received (US$)"
+
+msgid "Recebido ÷ horas das tarefas pagas"
+msgstr "Received ÷ hours of the paid tasks"
+
+#, python-format
+msgid "Registrado em <span class=\"nowrap\">%(when)s</span>"
+msgstr "Registered on <span class=\"nowrap\">%(when)s</span>"
+
+msgid "Registrar pagamento"
+msgstr "Register payment"
+
+msgid "Registre um pagamento pelo Faturamento"
+msgstr "Register a payment in Billing"
+
+msgid "Rejeitado"
+msgstr "Rejected"
+
+msgid "Review"
+msgstr "Review"
+
+msgid "Revisão do layout"
+msgstr "Layout review"
+
+msgid "Salvar empresa"
+msgstr "Save company"
+
+msgid "Salvar projeto"
+msgstr "Save project"
+
+msgid "Salvar tarefa"
+msgstr "Save task"
+
+msgid "Sem empresa"
+msgstr "No company"
+
+msgid "Semana"
+msgstr "Week"
+
+msgid ""
+"Separador <code>;</code>, <code>,</code> ou tab. Se alguma linha tiver erro, "
+"nada é importado."
+msgstr ""
+"Separator <code>;</code>, <code>,</code> or tab. If any line has an error, "
+"nothing is imported."
+
+msgid "Somado ao tempo total ao salvar."
+msgstr "Added to the total time when saving."
+
+msgid "Somado uma vez ao total do período."
+msgstr "Added once to the period's total."
+
+msgid "Status"
+msgstr "Status"
+
+msgid "Tarefa"
+msgstr "Task"
+
+msgid "Tarefas"
+msgstr "Tasks"
+
+#, python-format
+msgid ""
+"Tarefas <span class=\"nowrap\">%(tasks)s</span> + bônus <span "
+"class=\"nowrap\">%(bonus)s</span>"
+msgstr ""
+"Tasks <span class=\"nowrap\">%(tasks)s</span> + bonus <span "
+"class=\"nowrap\">%(bonus)s</span>"
+
+msgid "Tarefas do período"
+msgstr "Tasks of the period"
+
+msgid "Tarefas iniciadas no período."
+msgstr "Tasks started in the period."
+
+msgid "Tarefas listadas e calculadas. Nenhum marcado = todos."
+msgstr "Tasks listed and calculated. None checked = all."
+
+msgid "Tela de login"
+msgstr "Login screen"
+
+msgid "Tempo gasto, em minutos."
+msgstr "Time spent, in minutes."
+
+#, python-format
+msgid "Tempo não adicionado a “%(task)s”: %(error)s"
+msgstr "Time not added to “%(task)s”: %(error)s"
+
+msgid "Tempo total"
+msgstr "Total time"
+
+msgid "Todas as empresas"
+msgstr "All companies"
+
+msgid "Total"
+msgstr "Total"
+
+msgid "Total das tarefas"
+msgstr "Tasks total"
+
+msgid "Total desta página"
+msgstr "Total of this page"
+
+msgid "Total em dólar"
+msgstr "Total in dollars"
+
+msgid "Total em real"
+msgstr "Total in reais"
+
+msgid "Total pago em dólar"
+msgstr "Total paid in dollars"
+
+msgid "Total pago em real"
+msgstr "Total paid in reais"
+
+#, python-format
+msgid "Total: %(total)s"
+msgstr "Total: %(total)s"
+
+msgid "Término"
+msgstr "Finish"
+
+#, python-format
+msgid "Término: %(day)s"
+msgstr "Finish: %(day)s"
+
+msgid "URL do repositório do novo projeto"
+msgstr "Repository URL of the new project"
+
+msgid "URL do repositório git"
+msgstr "Git repository URL"
+
+msgid "Use o formato H:MM, por exemplo 1:30."
+msgstr "Use the H:MM format, for example 1:30."
+
+msgid "Valor"
+msgstr "Value"
+
+msgid ""
+"Valor da última hora de cada tarefa não rejeitada. Vazio = todas as horas "
+"pelo valor/h."
+msgstr ""
+"Value of the last hour of each task that was not rejected. Blank = every hour"
+" at the rate/h."
+
+msgid "Valor flat/h (US$)"
+msgstr "Flat rate/h (US$)"
+
+msgid "Valor/h (US$)"
+msgstr "Rate/h (US$)"
+
+msgid ""
+"Valores em dólar e, abaixo, em reais. Diferença = pago − estimado. Sem "
+"cotação no momento do pagamento, o estimado em reais fica “—”."
+msgstr ""
+"Values in dollars and, below, in reais. Difference = paid − estimated. "
+"Without an exchange rate when the payment was made, the estimate in reais is "
+"“—”."
+
+msgid "Ver tabela"
+msgstr "Show table"
+
+msgid "Ver tarefas"
+msgstr "Show tasks"
+
+msgid "Várias empresas"
+msgstr "Several companies"
+
+#, python-format
+msgid "data inválida “%(value)s” (use dd/mm/aaaa)"
+msgstr "invalid date “%(value)s” (use dd/mm/yyyy)"
+
+msgid "desc vazio"
+msgstr "empty desc"
+
+msgid "empresa"
+msgstr "company"
+
+msgid "empresas"
+msgstr "companies"
+
+msgid "fim do período"
+msgstr "end of the period"
+
+#, python-format
+msgid "github com mais de %(max)s caracteres"
+msgstr "github longer than %(max)s characters"
+
+#, python-format
+msgid ""
+"github inválido “%(value)s” (use dono/repositorio ou a URL do repositório)"
+msgstr ""
+"invalid github “%(value)s” (use owner/repository or the repository URL)"
+
+msgid "https://github.com/empresa/projeto.git"
+msgstr "https://github.com/company/project.git"
+
+#, python-format
+msgid "id com mais de %(max)s caracteres"
+msgstr "id longer than %(max)s characters"
+
+msgid "id vazio"
+msgstr "empty id"
+
+#, python-format
+msgid "id “%(id)s” repetido (já aparece na linha %(line)s)"
+msgstr "id “%(id)s” repeated (already on line %(line)s)"
+
+msgid "início do período"
+msgstr "start of the period"
+
+msgid "nome"
+msgstr "name"
+
+msgid "pagamento"
+msgstr "payment"
+
+msgid "pagamentos"
+msgstr "payments"
+
+msgid "projeto"
+msgstr "project"
+
+msgid "projetos"
+msgstr "projects"
+
+msgid "registrado em"
+msgstr "registered on"
+
+#, python-format
+msgid "status inválido “%(value)s” (use %(choices)s)"
+msgstr "invalid status “%(value)s” (use %(choices)s)"
+
+msgid "tarefa"
+msgstr "task"
+
+msgid "tarefas"
+msgstr "tasks"
+
+#, python-format
+msgid "tempo inválido “%(value)s” (use 3,8 ou 3:48)"
+msgstr "invalid time “%(value)s” (use 3,8 or 3:48)"
+
+msgid "valor estimado (R$)"
+msgstr "estimated value (R$)"
+
+msgid "valor estimado (US$)"
+msgstr "estimated value (US$)"
+
+msgid "valor pago (R$)"
+msgstr "paid value (R$)"
+
+msgid "valor pago (US$)"
+msgstr "paid value (US$)"
+
+#, python-format
+msgid ""
+"“%(project)s” (projeto novo): %(created)s tarefa(s) criada(s), %(skipped)s "
+"ignorada(s)"
+msgstr ""
+"“%(project)s” (new project): %(created)s task(s) created, %(skipped)s skipped"
+
+#, python-format
+msgid "“%(project)s”: %(created)s tarefa(s) criada(s), %(skipped)s ignorada(s)"
+msgstr "“%(project)s”: %(created)s task(s) created, %(skipped)s skipped"
+
+msgid "… e mais %(count)s erro."
+msgid_plural "… e mais %(count)s erros."
+msgstr[0] "… and %(count)s more error."
+msgstr[1] "… and %(count)s more errors."
+
+msgid "‹ Anterior"
+msgstr "‹ Previous"
+
+msgctxt "abbreviated month"
+msgid "abr"
+msgstr "Apr"
+
+msgctxt "abbreviated month"
+msgid "ago"
+msgstr "Aug"
+
+msgctxt "abbreviated month"
+msgid "dez"
+msgstr "Dec"
+
+msgctxt "abbreviated month"
+msgid "fev"
+msgstr "Feb"
+
+msgctxt "abbreviated month"
+msgid "jan"
+msgstr "Jan"
+
+msgctxt "abbreviated month"
+msgid "jul"
+msgstr "Jul"
+
+msgctxt "abbreviated month"
+msgid "jun"
+msgstr "Jun"
+
+msgctxt "abbreviated month"
+msgid "mai"
+msgstr "May"
+
+msgctxt "abbreviated month"
+msgid "mar"
+msgstr "Mar"
+
+msgctxt "abbreviated month"
+msgid "nov"
+msgstr "Nov"
+
+msgctxt "abbreviated month"
+msgid "out"
+msgstr "Oct"
+
+msgctxt "abbreviated month"
+msgid "set"
+msgstr "Sep"

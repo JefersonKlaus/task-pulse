@@ -1,12 +1,25 @@
+from django.db.models import Count
 from django.shortcuts import get_object_or_404, redirect, render
 
-from ..forms import ProjectForm, TaskAddTimeForm, TaskCreateForm
+from ..forms import ProjectForm, ProviderFilterForm, TaskAddTimeForm, TaskCreateForm
 from ..models import Project
 
 
 def project_list(request):
-    projects = Project.objects.all()
-    return render(request, "tasks/project_list.html", {"projects": projects})
+    """Every project (of ?empresa=<id>), with its company and task count."""
+    filter_form = ProviderFilterForm(request.GET)
+    projects = (
+        Project.objects.of_provider(filter_form.provider())
+        .select_related("provider")
+        .annotate(task_count=Count("tasks"))
+        # Explicit: Django ignores Meta.ordering in queries with aggregates.
+        .order_by("name", "pk")
+    )
+    return render(
+        request,
+        "tasks/project_list.html",
+        {"projects": projects, "filter_form": filter_form},
+    )
 
 
 def project_create(request):

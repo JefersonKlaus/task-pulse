@@ -52,8 +52,11 @@ class FormatTests(SimpleTestCase):
     def test_hmm_pads_minutes(self):
         self.assertEqual((format_hmm(65), format_hmm(0)), ("1:05", "0:00"))
 
-    def test_decimal_hours_have_two_decimals(self):
-        # 3:30 -> 3.50h; 0:20 -> 0.33h
-        self.assertEqual(
-            (format_decimal_hours(210), format_decimal_hours(20)), ("3.50h", "0.33h")
-        )
+    def test_decimal_hours_are_rounded_to_two_decimals(self):
+        for minutes, text in (
+            (210, "3.50h"),
+            (20, "0.33h"),  # 0.333...
+            (1, "0.02h"),  # 0.0166...: rounded, not cut
+        ):
+            with self.subTest(minutes=minutes):
+                self.assertEqual(format_decimal_hours(minutes), text)

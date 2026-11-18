@@ -14,8 +14,10 @@ class MoneyFormatTests(SimpleTestCase):
     def test_reais_brazilian_style(self):
         self.assertEqual(format_brl(Decimal("1234567.5")), "R$ 1.234.567,50")
 
-    def test_rate_with_four_decimals(self):
-        self.assertEqual(format_rate(Decimal("5.35214")), "R$ 5,3521")
+    def test_rate_with_four_decimals_rounded_half_up(self):
+        for rate, text in (("5.35214", "R$ 5,3521"), ("5.35225", "R$ 5,3523")):
+            with self.subTest(rate=rate):
+                self.assertEqual(format_rate(Decimal(rate)), text)
 
 
 class UsdToBrlTests(SimpleTestCase):

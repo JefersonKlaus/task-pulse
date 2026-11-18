@@ -1,18 +1,20 @@
 {% extends "tasks/base.html" %}
-{% block title %}{% if project %}Editar {{ project.name }}{% else %}Novo projeto{% endif %} | Task Pulse{% endblock %}
+{% load i18n %}
+{% block title %}{% if project %}{% blocktranslate with name=project.name %}Editar {{ name }}{% endblocktranslate %}{% else %}{% translate "Novo projeto" %}{% endif %} | Task Pulse{% endblock %}
 {% block content %}
-<h1>{% if project %}Editar projeto{% else %}Novo projeto{% endif %}</h1>
-<p class="muted">Informe a URL do repositório git. O nome é opcional.</p>
+<h1>{% if project %}{% translate "Editar projeto" %}{% else %}{% translate "Novo projeto" %}{% endif %}</h1>
+<p class="muted">{% translate "Informe a URL do repositório git. O nome é opcional." %}</p>
 <form method="post">
     {% csrf_token %}
     {{ form.non_field_errors }}
     {% for field in form %}
         {% include "tasks/_field.html" %}
+        {% if field.name == "provider" %}<small class="helptext">{% url 'tasks:provider_create' as new_provider %}{% blocktranslate %}A empresa não está na lista? <a href="{{ new_provider }}">Cadastre uma empresa</a>.{% endblocktranslate %}</small>{% endif %}
     {% endfor %}
     {% if project %}
-    <p><button type="submit">Salvar projeto</button> <a href="{% url 'tasks:project_detail' project.pk %}">Cancelar</a></p>
+    <p class="form-actions"><button type="submit">{% translate "Salvar projeto" %}</button> <a href="{% url 'tasks:project_detail' project.pk %}">{% translate "Cancelar" %}</a></p>
     {% else %}
-    <p><button type="submit">Criar projeto</button> <a href="{% url 'tasks:project_list' %}">Cancelar</a></p>
+    <p class="form-actions"><button type="submit">{% translate "Criar projeto" %}</button> <a href="{% url 'tasks:project_list' %}">{% translate "Cancelar" %}</a></p>
     {% endif %}
 </form>
 {% endblock %}

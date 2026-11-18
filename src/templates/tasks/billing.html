@@ -1,0 +1,177 @@
+{% extends "tasks/base.html" %}
+{% load i18n %}
+{% load task_time money %}
+{% block title %}{% translate "Faturamento" %} | Task Pulse{% endblock %}
+{% block content %}
+<h1>{% translate "Faturamento" %}</h1>
+<form method="get" class="filters">
+    {{ form.non_field_errors }}
+    {% if form.fields.empresa.queryset.exists %}{% include "tasks/_filter_field.html" with field=form.empresa %}{% endif %}
+    {% include "tasks/_filter_field.html" with field=form.inicio %}
+    {% include "tasks/_filter_field.html" with field=form.fim %}
+    {% include "tasks/_filter_field.html" with field=form.valor_hora %}
+    {% include "tasks/_filter_field.html" with field=form.valor_flat %}
+    {% include "tasks/_filter_field.html" with field=form.bonus %}
+    {# Help texts are tooltips (title), shown while hovering; see _filter_field.html. #}
+    <fieldset class="choices" title="{{ form.status.help_text }}" aria-describedby="id_status_helptext">
+        <legend>{{ form.status.label }}</legend>
+        {{ form.status.errors }}
+        {% for checkbox in form.status %}<label>{{ checkbox.tag }}{{ checkbox.choice_label }}</label>{% endfor %}
+        <small class="visually-hidden" id="id_status_helptext">{{ form.status.help_text }}</small>
+    </fieldset>
+    <fieldset class="choices" title="{{ form.pagas.help_text }}">
+        <legend>{% translate "Pagamento" %}</legend>
+        <label for="{{ form.pagas.id_for_label }}">{{ form.pagas }}{{ form.pagas.label }}</label>
+        <small class="visually-hidden" id="{{ form.pagas.auto_id }}_helptext">{{ form.pagas.help_text }}</small>
+    </fieldset>
+    <div class="actions"><button type="submit">{% translate "Atualizar" %}</button></div>
+</form>
+
+{% if report %}
+{% with summary=report.summary %}
+<div class="stats">
+    <div class="card stat">{% translate "Horas trabalhadas" %}<span class="value">{{ summary.minutes|decimal_hours }}</span><span class="muted">{{ summary.minutes|hmm }}</span></div>
+    <div class="card stat">{% translate "Tarefas" %}<span class="value">{{ summary.lines|length }}</span></div>
+    {% if summary.total_usd is not None %}
+    <div class="card stat wide">{% translate "Total em dólar" %}<span class="value">{{ summary.total_usd|usd }}</span>
+        {% if summary.bonus_usd is not None %}<span class="muted">{% blocktranslate with tasks=summary.tasks_usd|usd bonus=summary.bonus_usd|usd %}Tarefas <span class="nowrap">{{ tasks }}</span> + bônus <span class="nowrap">{{ bonus }}</span>{% endblocktranslate %}</span>{% endif %}
+    </div>
+    <div class="card stat wide">{% translate "Total em real" %}
+        {% if report.total_brl is not None %}
+        <span class="value">{{ report.total_brl|brl }}</span>
+        <span class="muted">{% if report.exchange_rate.quoted_at %}{% blocktranslate with rate=report.exchange_rate.rate|brl_rate when=report.exchange_rate.quoted_at %}Cotação {{ rate }} em {{ when }}{% endblocktranslate %}{% else %}{% blocktranslate with rate=report.exchange_rate.rate|brl_rate %}Cotação {{ rate }}{% endblocktranslate %}{% endif %}</span>
+        {% else %}
+        <span class="value">—</span>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+
+{% if report.to_pay %}
+{% with to_pay=report.to_pay %}
+<div class="card to-pay">
+    <div>
+        <strong>{% translate "A pagar:" %}</strong> {% blocktranslate count counter=to_pay.lines|length %}{{ counter }} tarefa{% plural %}{{ counter }} tarefas{% endblocktranslate %} · {{ to_pay.minutes|decimal_hours }} · {{ to_pay.total_usd|usd }}{% if report.to_pay_brl is not None %} · {{ report.to_pay_brl|brl }}{% endif %}
+        {% if report.paid_tasks %}<span class="muted">{% blocktranslate count counter=report.paid_tasks %}({{ counter }} já paga fica de fora){% plural %}({{ counter }} já pagas ficam de fora){% endblocktranslate %}</span>{% endif %}
+    </div>
+    {% if payment_form %}<button type="button" id="open-payment">{% translate "Pagar" %}</button>{% else %}<p class="muted choose-provider">{% translate "Para registrar o pagamento, escolha no filtro a empresa que está pagando." %}</p>{% endif %}
+</div>
+
+{% if payment_form %}
+<dialog id="payment-dialog" aria-labelledby="payment-title"{% if payment_form.is_bound %} data-open{% endif %}>
+    <form method="post" action="{% url 'tasks:billing_pay' %}">
+        {% csrf_token %}
+        <h2 id="payment-title">{% translate "Registrar pagamento" %}</h2>
+        <p class="muted">{% blocktranslate with start=form.cleaned_data.inicio|date:"d/m/Y" end=form.cleaned_data.fim|date:"d/m/Y" %}Período de {{ start }} a {{ end }}. As tarefas a pagar serão marcadas como pagas.{% endblocktranslate %}</p>
+        <dl class="payment-totals">
+            <div><dt>{% translate "Tarefas" %}</dt><dd>{{ to_pay.lines|length }}</dd></div>
+            <div><dt>{% translate "Horas" %}</dt><dd>{{ to_pay.minutes|decimal_hours }}</dd></div>
+            <div><dt>{% translate "Estimado em dólar" %}</dt><dd>{{ to_pay.total_usd|usd }}</dd></div>
+            <div><dt>{% translate "Estimado em real" %}</dt><dd>{% if report.to_pay_brl is not None %}{{ report.to_pay_brl|brl }}{% else %}—{% endif %}</dd></div>
+        </dl>
+        {{ payment_form.non_field_errors }}
+        {% for field in payment_form.hidden_fields %}{{ field.errors }}{{ field }}{% endfor %}
+        {% include "tasks/_field.html" with field=payment_form.pago_usd %}
+        {% include "tasks/_field.html" with field=payment_form.pago_brl %}
+        <div class="dialog-actions">
+            <button type="button" class="secondary" data-close>{% translate "Cancelar" %}</button>
+            <button type="submit">{% translate "Confirmar pagamento" %}</button>
+        </div>
+    </form>
+</dialog>
+<script>
+    // Opens the "Pagar" dialog; reopens it when the amounts had errors.
+    (function () {
+        var dialog = document.getElementById("payment-dialog");
+        document.getElementById("open-payment").addEventListener("click", function () {
+            dialog.showModal();
+        });
+        dialog.querySelector("[data-close]").addEventListener("click", function () {
+            dialog.close();
+        });
+        if (dialog.hasAttribute("data-open")) {
+            dialog.showModal();
+        }
+    })();
+</script>
+{% endif %}
+{% endwith %}
+{% endif %}
+{% if report.tasks_without_provider %}
+<p class="warning">{% url 'tasks:project_list' as projects_url %}{% blocktranslate count counter=report.tasks_without_provider %}{{ counter }} tarefa não paga é de um projeto sem empresa e não pode ser paga. <a href="{{ projects_url }}">Defina a empresa do projeto</a>.{% plural %}{{ counter }} tarefas não pagas são de projetos sem empresa e não podem ser pagas. <a href="{{ projects_url }}">Defina a empresa dos projetos</a>.{% endblocktranslate %}</p>
+{% endif %}
+
+{% if report.exchange_rate_unavailable %}
+<p class="warning">{% translate "Cotação do dólar indisponível no momento; o total em reais não pôde ser calculado. Tente de novo em alguns minutos." %}</p>
+{% endif %}
+
+<div class="chips">
+    {% for status in summary.by_status %}
+    <span class="chip">{{ status.label }}: {% blocktranslate count counter=status.tasks %}{{ counter }} tarefa{% plural %}{{ counter }} tarefas{% endblocktranslate %} · {{ status.minutes|decimal_hours }}</span>
+    {% endfor %}
+</div>
+
+<div class="card">
+    <h2>{% translate "Tarefas do período" %}</h2>
+    {% if not form.cleaned_data.pagas %}<p class="muted paid-hidden">{% translate "As tarefas já pagas estão ocultas. Marque “Incluir tarefas pagas” para vê-las junto com as demais." %}</p>{% endif %}
+    {% if summary.lines %}
+    <div class="table-scroll">
+    {# On phones each row is a card; base.html places and labels the cells by position (table.cards), so update it when adding or moving a column. #}
+    <table class="tasks cards period-tasks">
+        <thead>
+            <tr>
+                <th>{% translate "Início" %}</th>
+                <th>{% translate "Projeto" %}</th>
+                <th>{% translate "Tarefa" %}</th>
+                <th>{% translate "Status" %}</th>
+                <th>{% translate "Término" %}</th>
+                <th class="number">{% translate "Horas" %}</th>
+                {% if summary.total_usd is not None %}<th class="number">{% translate "Valor" %}</th>{% endif %}
+            </tr>
+        </thead>
+        <tbody>
+            {% for line in summary.lines %}
+            <tr>
+                <td>{{ line.task.started_on|date:"d/m/Y" }}</td>
+                <td><a href="{% url 'tasks:project_detail' line.task.project_id %}">{{ line.task.project.name }}</a></td>
+                <td>{% if line.task.external_id %}<span class="muted">#{{ line.task.external_id }}</span> {% endif %}<a href="{% url 'tasks:task_update' line.task.pk %}">{{ line.task.name }}</a></td>
+                <td><span class="status">{{ line.task.get_status_display }}</span>{% if line.task.payment_id %} <span class="status paid">{% translate "Pago" %}</span>{% endif %}</td>
+                <td>{{ line.task.finished_on|date:"d/m/Y"|default:"—" }}</td>
+                <td class="number">{{ line.task.minutes_spent|decimal_hours }}</td>
+                {% if summary.total_usd is not None %}<td class="number">{{ line.value|usd }}</td>{% endif %}
+            </tr>
+            {% endfor %}
+        </tbody>
+        <tfoot>
+            {% if summary.bonus_usd is not None %}
+            <tr>
+                <td colspan="5">{% translate "Total das tarefas" %}</td>
+                <td class="number">{{ summary.minutes|decimal_hours }}</td>
+                <td class="number">{{ summary.tasks_usd|usd }}</td>
+            </tr>
+            <tr>
+                <td colspan="6">{% translate "Bônus" %}</td>
+                <td class="number">{{ summary.bonus_usd|usd }}</td>
+            </tr>
+            <tr>
+                <td colspan="6">{% translate "Total" %}</td>
+                <td class="number">{{ summary.total_usd|usd }}</td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="5">{% translate "Total" %}</td>
+                <td class="number">{{ summary.minutes|decimal_hours }}</td>
+                {% if summary.total_usd is not None %}<td class="number">{{ summary.total_usd|usd }}</td>{% endif %}
+            </tr>
+            {% endif %}
+        </tfoot>
+    </table>
+    </div>
+    {% else %}
+    <p class="muted">{% translate "Nenhuma tarefa com os status escolhidos iniciada neste período." %}</p>
+    {% endif %}
+    <p class="muted">{% translate "As tarefas entram no período pela data de início; só os status marcados são listados e calculados. Cada hora vale o valor/h; a última hora de cada tarefa não rejeitada vale o valor flat, se informado. O bônus é somado uma vez ao total." %}</p>
+</div>
+{% endwith %}
+{% endif %}
+{% endblock %}

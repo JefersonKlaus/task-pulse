@@ -9,8 +9,13 @@ that matter for the behaviour it verifies.
 """
 
 from datetime import date
+from decimal import Decimal
 
-from src.models import Project, Task
+from src.models import Payment, Project, Provider, Task
+
+
+def create_provider(name="Alignerr"):
+    return Provider.objects.create(name=name)
 
 
 def build_project(**overrides):
@@ -48,3 +53,21 @@ def create_task(project=None, **overrides):
         project=project or create_project(),
         **task_values(**overrides),
     )
+
+
+def create_payment(*tasks, **overrides):
+    """A saved payment; ``tasks`` become paid by it."""
+    values = {
+        "period_start": date(2026, 11, 1),
+        "period_end": date(2026, 11, 30),
+        "estimated_usd": Decimal("100.00"),
+        "estimated_brl": Decimal("535.00"),
+        "paid_usd": Decimal("100.00"),
+        "paid_brl": Decimal("530.00"),
+    }
+    values.update(overrides)
+    payment = Payment.objects.create(**values)
+    for task in tasks:
+        task.payment = payment
+        task.save()
+    return payment
