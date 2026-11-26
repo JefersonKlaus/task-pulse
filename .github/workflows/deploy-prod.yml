@@ -1,12 +1,9 @@
-# Production deploys by itself on every push to `main` (a merged PR), after the same tests as CI.
-# To require someone to approve each deploy, set "Required reviewers" on the `producao` Environment
-# (Settings → Environments): the deploy then waits for that approval. It can also be run by hand
-# (Actions → Deploy production → Run workflow, on main), typing "producao" to confirm.
+# Production has no automatic trigger yet (a push to `main` deploys to dev: deploy-dev.yml). For now it
+# only runs by hand: Actions → Deploy production → Run workflow, on main, typing "producao" to confirm.
+# To require someone to approve each deploy, set "Required reviewers" on the `producao` Environment.
 name: Deploy production
 
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
     inputs:
       confirm:

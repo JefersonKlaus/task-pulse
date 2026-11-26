@@ -1,9 +1,10 @@
-# Every push to the `dev` branch deploys automatically to the development AWS account.
+# Merging `dev` into `main` (the only way anything reaches main: see branch-flow.yml) deploys to the
+# development AWS account, after the same tests as CI.
 name: Deploy dev
 
 on:
   push:
-    branches: [dev]
+    branches: [main]
 
 concurrency:
   group: deploy-dev

@@ -1,0 +1,27 @@
+# Work goes in a branch made from `dev`, merged into `dev` by a pull request; `main` only takes pull
+# requests from `dev`. The ruleset on `main` (no direct pushes, pull request required) makes this check
+# required, so a pull request into main from any other branch can't be merged.
+name: Branch flow
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  from-dev:
+    name: Only dev into main
+    runs-on: ubuntu-24.04
+    steps:
+      - name: The pull request must come from dev
+        env:
+          HEAD: ${{ github.head_ref }} # through a variable: a branch name is never pasted into the shell
+          REPO: ${{ github.event.pull_request.head.repo.full_name }}
+          BASE_REPO: ${{ github.repository }}
+        run: |
+          if [ "$HEAD" != "dev" ] || [ "$REPO" != "$BASE_REPO" ]; then
+            echo "::error::main only takes pull requests from dev (this one comes from $REPO:$HEAD). Merge your branch into dev first."
+            exit 1
+          fi
