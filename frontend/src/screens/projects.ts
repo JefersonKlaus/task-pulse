@@ -7,8 +7,8 @@ import * as api from "../api.js";
 import { t } from "../i18n.js";
 import type { BonusTier, Company, Project, Rule } from "../types.js";
 import {
-  CURRENCIES, actionsMenu, centsToText, confirmAction, errorMessage, field, formDialog, formatDate, formatMoney,
-  h, notify, nowLocal, render, toCents,
+  CURRENCIES, actionsMenu, centsToText, confirmAction, errorMessage, field, formatDate, formatMoney, formDialog, h, loading,
+  notify, nowLocal, render, toCents,
 } from "../util.js";
 import { companyForm } from "./companies.js";
 import { state } from "./filters.js";
@@ -17,7 +17,7 @@ import { state } from "./filters.js";
 interface Back { label: string; back: () => unknown }
 
 export async function mount(area: HTMLElement): Promise<void> {
-  render(area, h("p", { className: "notice" }, t("Carregando…")));
+  render(area, loading());
   let companies: Company[], projects: Project[];
   try { [companies, projects] = await Promise.all([api.companies.list(), api.projects.list()]); }
   catch (error) { return render(area, h("p", { className: "notice" }, errorMessage(error))); }
@@ -73,7 +73,7 @@ export function projectRow(p: Project, showCompany: boolean, open: () => unknown
 
 // ------------------------------------------------------------------ a project's page
 export async function openProject(area: HTMLElement, id: string, back: Back): Promise<void> {
-  render(area, h("p", { className: "notice" }, t("Carregando…")));
+  render(area, loading());
   let project: Project, companies: Company[];
   try { [project, companies] = await Promise.all([api.projects.get(id), api.companies.list()]); }
   catch (error) { return render(area, h("p", { className: "notice" }, errorMessage(error))); }
