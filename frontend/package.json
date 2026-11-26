@@ -1,0 +1,17 @@
+{
+  "name": "task-pulse-frontend",
+  "private": true,
+  "type": "module",
+  "description": "The site: TypeScript compiled by tsc to plain ES modules in public/js (no bundler, no framework).",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "watch": "tsc -p tsconfig.json --watch"
+  },
+  "devDependencies": {
+    "typescript": "5.6.3"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}
