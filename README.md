@@ -197,8 +197,8 @@ site), then the site is built and published. Two environments, each in its own A
 
 | Environment | Deploys when |
 |---|---|
-| `dev` | every merge into `main` (which only comes from `dev`) |
-| `prod` | no automatic trigger yet; only by hand: Actions → *Deploy production* → *Run workflow*, typing `producao` |
+| `dev` (GitHub Environment `development`) | every merge into `main` (which only comes from `dev`) |
+| `prod` (GitHub Environment `producao`) | no automatic trigger yet; only by hand: Actions → *Deploy production* → *Run workflow*, typing `producao` |
 
 ### Branches
 
@@ -228,7 +228,7 @@ table** (every login and all the data): that stops it before anything is applied
 1. **In each AWS account:** create an IAM policy from [`docs/iam-deploy-policy.json`](docs/iam-deploy-policy.json)
    (it only touches `task-pulse-*` resources), a user without console access with that policy,
    and an access key for it.
-2. **On GitHub** (Settings → Environments), create `dev` and `producao`, each with:
+2. **On GitHub** (Settings → Environments), create `development` and `producao`, each with:
    - secrets `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY`
    - variables `AWS_ACCOUNT_ID` (the deploy stops if the key is from another account) and `AWS_REGION`
 3. **First deploy:** merge a pull request from `dev` into `main`. The site's address shows up in the

@@ -9,7 +9,7 @@ on:
         required: true
         type: string
       github_environment:
-        description: "Name of the GitHub Environment: dev or producao"
+        description: "Name of the GitHub Environment: development or producao"
         required: true
         type: string
 

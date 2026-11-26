@@ -13,7 +13,7 @@ on:
         description: "Environment in which to create the user"
         required: true
         type: choice
-        options: [dev, producao] # names of the GitHub Environments
+        options: [development, producao] # names of the GitHub Environments
       name:
         description: "User's name (e.g. Ana Lima)"
         required: true
