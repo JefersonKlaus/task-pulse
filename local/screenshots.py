@@ -59,7 +59,7 @@ def run():
     url = f"http://127.0.0.1:{app.server_address[1]}/"
     with sync_playwright() as p:
         browser = p.chromium.launch()
-        phone = browser.new_page(viewport=PHONE, device_scale_factor=2, color_scheme="light")
+        phone = browser.new_page(viewport=PHONE, device_scale_factor=2, color_scheme="light", locale="pt-BR")
         screens(phone, "phone")
         phone.goto(f"http://127.0.0.1:{login.server_address[1]}/")
         expect(phone.locator("#l-email")).to_be_visible()
@@ -70,12 +70,23 @@ def run():
         expect(phone.locator("#s-repeat")).to_be_visible()
         shoot(phone, "phone-signup", whole=True)
 
-        dark = browser.new_page(viewport=PHONE, device_scale_factor=2, color_scheme="dark")
+        settings_page = browser.new_page(viewport=PHONE, device_scale_factor=2, color_scheme="light", locale="pt-BR")
+        settings_page.goto(url)
+        settings_page.click("#top-bar .settings-link")
+        expect(settings_page.locator("#settings-language")).to_be_visible()
+        shoot(settings_page, "phone-settings")
+
+        english = browser.new_page(viewport=PHONE, device_scale_factor=2, color_scheme="light", locale="en-US")
+        english.goto(url)
+        expect(english.locator("[data-task]").first).to_be_visible()
+        shoot(english, "phone-tasks-en")
+
+        dark = browser.new_page(viewport=PHONE, device_scale_factor=2, color_scheme="dark", locale="pt-BR")
         dark.goto(url)
         expect(dark.locator("[data-task]").first).to_be_visible()
         shoot(dark, "phone-tasks-dark")
 
-        wide = browser.new_page(viewport=WIDE, color_scheme="light")
+        wide = browser.new_page(viewport=WIDE, color_scheme="light", locale="pt-BR")
         wide.goto(url)
         expect(wide.locator("[data-task]").first).to_be_visible()
         shoot(wide, "wide-tasks")

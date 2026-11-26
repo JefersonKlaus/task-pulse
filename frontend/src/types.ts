@@ -4,8 +4,11 @@
 export type Status = "DOING" | "DONE" | "APPROVED" | "REJECTED";
 export type Billing = "" | "paid" | "not_paid";
 
+import { N_ } from "./i18n.js";
+
+/** In Portuguese: show them with t(STATUS_LABELS[status]). */
 export const STATUS_LABELS: Record<Status, string> = {
-  DOING: "Fazendo", DONE: "Concluída", APPROVED: "Aprovada", REJECTED: "Rejeitada",
+  DOING: N_("Fazendo"), DONE: N_("Concluída"), APPROVED: N_("Aprovada"), REJECTED: N_("Rejeitada"),
 };
 
 export interface Company { id: string; name: string; notes: string; projects?: number; open_tasks?: number }

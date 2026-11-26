@@ -52,6 +52,7 @@ class RequestHandler(BaseHTTPRequestHandler):
     def _api(self):
         url = urlparse(self.path)
         event = {"rawPath": url.path[len("/api"):], "requestContext": {"http": {"method": self.command}},
+                 "headers": {"accept-language": self.headers.get("Accept-Language", "")},
                  "queryStringParameters": {k: v[0] for k, v in parse_qs(url.query).items()} or None,
                  "body": self.rfile.read(int(self.headers.get("Content-Length") or 0)).decode()}
         claims = self._claims()

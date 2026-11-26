@@ -1,5 +1,6 @@
 """Inbound adapter shared by every Lambda: API Gateway event (HTTP API, payload v2) -> Request ->
-the Lambda's action -> HTTP response. Login, path ids, body and errors are handled here, once."""
+the Lambda's action -> HTTP response. Login, path ids, body and errors are handled here, once. Error
+messages go out in the request's language (Accept-Language: en -> English; otherwise Portuguese)."""
 from __future__ import annotations
 
 import base64
@@ -10,6 +11,7 @@ from typing import Any, Callable, Optional
 
 from ..domain.errors import BusinessError, ValidationError
 from ..domain.models import ITEM_ID_RE
+from ..i18n import language, translate
 from ..ports import Dependencies
 
 log = logging.getLogger(__name__)
@@ -36,23 +38,25 @@ def endpoint(action: Action, *, status: int = 200) -> Handle:
     """Wraps a Lambda's action. Every {...} in a route is an id: one that is not an id is 404 before
     touching the database. A 204 answers with no body."""
     def handle(event: dict[str, Any], deps: Dependencies) -> dict[str, Any]:
+        lang = language((event.get("headers") or {}).get("accept-language"))
+        error = lambda status, message: response(status, {"error": translate(message, lang)})  # noqa: E731
         try:
             owner = _owner(event)
             path = event.get("pathParameters") or {}
             if not all(isinstance(v, str) and ITEM_ID_RE.match(v) for v in path.values()):
-                return response(404, {"error": "não encontrado"})
+                return error(404, "não encontrado")
             method = event["requestContext"]["http"]["method"]
             request = Request(owner, _body(event) if method in ("POST", "PUT") else {},
                               event.get("queryStringParameters") or {}, dict(path))
             result = action(deps, request)
             return response(status, None if status == 204 else result)
         except PermissionError:
-            return response(401, {"error": "não autenticado"})
-        except BusinessError as error:
-            return response(error.status, {"error": str(error)})
+            return error(401, "não autenticado")
+        except BusinessError as failure:
+            return error(failure.status, str(failure))
         except Exception:
             log.exception("unexpected error")
-            return response(500, {"error": "erro interno, tente de novo"})
+            return error(500, "erro interno, tente de novo")
     return handle
 
 
