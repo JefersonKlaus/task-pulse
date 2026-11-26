@@ -15,11 +15,12 @@ The app speaks **Portuguese (Brazil) and English**: each person chooses in *Conf
 
 Made for the phone first: one column, the menu at the bottom, every button big enough for a thumb.
 
-| Tarefas | Faturamento | Projeto e regras | Criar conta |
+| Tarefas | Faturamento | Empresa | Projeto e regras |
 |---|---|---|---|
-| ![Open tasks as cards: time worked, + Tempo and Concluir](docs/screenshots/phone-tasks.png) | ![Billing: what should be received, the tasks with a box to untick the ones that won't be paid, and the form to register what was received](docs/screenshots/phone-billing.png) | ![A project with its pricing rule in force: hourly rate, flat last hour, only approved tasks paid, bonus tiers](docs/screenshots/phone-project.png) | ![Sign-up: name, e-mail, password twice](docs/screenshots/phone-signup.png) |
+| ![Open tasks as cards: time worked, + Tempo and Concluir](docs/screenshots/phone-tasks.png) | ![Billing: what should be received, the tasks with a box to untick the ones that won't be paid, and the form to register what was received](docs/screenshots/phone-billing.png) | ![A company's page with its projects and Novo projeto](docs/screenshots/phone-company.png) | ![A project with its pricing rule in force: hourly rate, flat last hour, only approved tasks paid, bonus tiers](docs/screenshots/phone-project.png) |
 
 <p>
+  <img src="docs/screenshots/phone-signup.png" width="24%" alt="Sign-up: name, e-mail, password twice">
   <img src="docs/screenshots/phone-login.png" width="24%" alt="Login by e-mail and password">
   <img src="docs/screenshots/phone-settings.png" width="24%" alt="Settings: language, name and password">
   <img src="docs/screenshots/phone-tasks-en.png" width="24%" alt="Tasks in English">
@@ -100,7 +101,8 @@ frontend/
   src/util.ts           DOM helpers, money (cents), time (minutes), dates, dialogs
   src/screens/filters.ts   company / project / period (month or week) shared by every page
   src/screens/tasks.ts     Tarefas: open tasks by period, + Tempo, Concluir, Aprovar / Rejeitar
-  src/screens/projects.ts  Empresas e projetos: companies, projects, pricing rules
+  src/screens/companies.ts Empresas: the companies, and each company's page with all its projects
+  src/screens/projects.ts  Projetos: every project (filter by company), a project's page and its pricing rules
   src/screens/billing.ts   Faturamento: a project's period, untick what won't be paid, register what was received
   src/screens/payments.ts  Pagamentos: every payment, should receive x received
   src/screens/settings.ts  Configurações (apart from the menu): language, name, password
@@ -251,7 +253,7 @@ it in `t("...")` and add its English to `EN`.
 
 The login is the **e-mail and a password**. Anyone can create an account on the site (*Criar conta*:
 name, e-mail, password with 10+ characters, upper and lower case and a number). Cognito e-mails a
-6-digit code, and the account only logs in after the code is typed (*Reenviar código* sends another).
+6-digit code (the e-mail is in English, set in [infra/cognito.tf](infra/cognito.tf)), and the account only logs in after the code is typed (*Reenviar código* sends another).
 Each account sees only its own data. Cognito's own sender is used: no setup, but about 50 e-mails a
 day; for more, configure SES in [infra/cognito.tf](infra/cognito.tf).
 

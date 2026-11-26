@@ -36,7 +36,7 @@ export async function mount(area: HTMLElement): Promise<void> {
   if (!projects.length) {
     return render(area, h("h1", {}, t("Tarefas")), h("div", { className: "card empty-state" },
       h("h2", {}, t("Nenhum projeto ainda")),
-      h("p", { className: "muted" }, t("Cadastre a empresa e o projeto (com o valor hora ou fixo) em Projetos."))));
+      h("p", { className: "muted" }, t("Cadastre a empresa em Empresas e o projeto (com o valor hora ou fixo) em Projetos."))));
   }
 
   async function load(): Promise<void> {
