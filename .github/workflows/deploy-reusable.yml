@@ -123,7 +123,7 @@ jobs:
             "$(terraform output -raw api_url)" > ../frontend/public/js/config.js
           cat ../frontend/public/js/config.js
 
-      - name: Publish the site (only frontend/public: never src/ or node_modules/) and clear the cache
+      - name: Publish the site (only frontend/public, never src/ or node_modules/) and clear the cache
         working-directory: infra
         run: |
           aws s3 sync ../frontend/public "s3://$(terraform output -raw site_bucket)" \
