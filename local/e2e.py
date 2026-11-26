@@ -127,13 +127,22 @@ def run():
         expect(page.locator(".empty-state")).to_contain_text("Nenhum projeto ainda")
         errors.clear()                  # the browser logged Cognito's 400s (weak code, wrong password), on purpose
 
-        # a company and its project: R$ 100/h, last hour R$ 150/h if approved, only approved are paid
+        # a company (its own page, under Empresas) and two projects of it. Portal: R$ 100/h, last hour
+        # R$ 150/h if approved, only approved are paid; Aplicativo: R$ 350 per task
         page.click("nav >> text=Projetos")
+        expect(page.locator(".empty-state")).to_contain_text("Cadastre a empresa primeiro")
+        page.click("nav >> text=Empresas")
         page.click("#new-company")
         page.fill("#c-name", "Etho")
         page.click("dialog >> text=Salvar")
-        expect(page.locator("[data-company='Etho']")).to_be_visible()
-        page.click("[data-company='Etho'] >> text=Novo projeto")
+        expect(page.locator("h1")).to_have_text("Etho")                  # the company's page
+        page.click("#new-project")
+        page.fill("#p-name", "Aplicativo")
+        page.click("dialog label.choice:has-text('Valor fixo')")
+        page.fill("#r-fixed", "350")
+        page.click("dialog >> text=Salvar")
+        expect(page.locator("#company-projects [data-project]")).to_have_count(1)
+        page.click("#new-project")
         page.fill("#p-name", "Portal")
         page.fill("#r-starts", f"{month}-01T00:00")
         page.fill("#r-hourly", "abc")
@@ -146,6 +155,12 @@ def run():
         page.fill(".tier-row input[type=number]", "2")
         page.fill(".tier-row input[aria-label='Valor do bônus']", "50")
         page.click("dialog >> text=Salvar")
+        expect(page.locator("#company-projects [data-project]")).to_have_count(2)   # one company, many projects
+        page.click("nav >> text=Empresas")
+        expect(page.locator("[data-company='Etho']")).to_contain_text("2 projeto(s)")
+        page.click("nav >> text=Projetos")
+        expect(page.locator("#project-list [data-project]")).to_have_count(2)
+        page.click("[data-project='Portal']")
         expect(page.locator("h1")).to_have_text("Portal")
         expect(page.locator("#rules .rule.current")).to_contain_text("R$ 100,00/h")
         expect(page.locator("#rules .rule.current")).to_contain_text("2+ aprovadas = R$ 50,00")
@@ -223,7 +238,7 @@ def run():
         # in English: money, dates and the API's own messages too
         page.click("nav >> text=Payments")
         expect(page.locator("#payments-totals")).to_contain_text("not paid: R$112.50")
-        page.click("nav >> text=Projects")
+        page.click("nav >> text=Companies")
         page.click("#new-company")
         page.fill("#c-name", "etho")
         page.click("dialog >> text=Save")
@@ -250,8 +265,10 @@ def run_without_login():
         assert width <= 390, f"the page scrolls sideways on a phone ({width}px)"
         expect(page.locator("#top-bar .local-mode")).to_be_visible()                 # no login here
         expect(page.locator("nav")).to_be_visible()                                   # the bottom bar
-        page.click("nav >> text=Projetos")
+        page.click("nav >> text=Empresas")
         expect(page.locator("[data-company]")).to_have_count(2)
+        page.click("nav >> text=Projetos")
+        expect(page.locator("#project-list [data-project]")).to_have_count(3)
         page.click("#top-bar .settings-link")                                      # Configurações, on a phone
         expect(page.locator("#settings-local")).to_be_visible()                      # no name or password here
         page.click("#settings-language >> text=English")

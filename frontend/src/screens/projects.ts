@@ -1,4 +1,5 @@
-// Empresas e projetos: the companies, each with its projects; a project's page with its pricing rules.
+// Projetos: every project, of every company (or of the one chosen), and a project's page with its pricing
+// rules. A company has as many projects as needed (screens/companies.ts registers the companies).
 // A rule says how the project pays from a moment on (hourly with an optional flat last hour, or fixed per
 // task; whether only approved tasks are paid; the bonus by approved tasks). A task is priced by the rule in
 // force when it was finished, so a new rule never changes what was finished before it.
@@ -9,82 +10,83 @@ import {
   CURRENCIES, actionsMenu, centsToText, confirmAction, errorMessage, field, formDialog, formatDate, formatMoney,
   h, notify, nowLocal, render, toCents,
 } from "../util.js";
+import { companyForm } from "./companies.js";
 import { state } from "./filters.js";
+
+/** Where a project's page goes back to: the list of projects, or the company it was opened from. */
+interface Back { label: string; back: () => unknown }
 
 export async function mount(area: HTMLElement): Promise<void> {
   render(area, h("p", { className: "notice" }, t("Carregando…")));
   let companies: Company[], projects: Project[];
-  try {
-    [companies, projects] = await Promise.all([api.companies.list(), api.projects.list()]);
-  } catch (error) { return render(area, h("p", { className: "notice" }, errorMessage(error))); }
-  const reload = async () => { await mount(area); };
+  try { [companies, projects] = await Promise.all([api.companies.list(), api.projects.list()]); }
+  catch (error) { return render(area, h("p", { className: "notice" }, errorMessage(error))); }
+  const reload = () => mount(area);
+  const toList: Back = { label: t("Projetos"), back: reload };
 
-  const cards = companies.map((company) => {
-    const own = projects.filter((p) => p.company_id === company.id);
-    return h("div", { className: "card", "data-company": company.name },
-      h("div", { className: "row" },
-        h("h2", {}, company.name, h("span", { className: "count" }, ` · ${t("{count} projeto(s)", { count: own.length })}`)),
-        h("div", { className: "actions tight" },
-          h("button", { className: "secondary small", onclick: () => projectForm(companies, null, company.id,
-            (p) => openProject(area, p.id)) }, t("Novo projeto")),
-          actionsMenu(company.name, [
-            { text: t("Editar"), onclick: () => companyForm(company, reload) },
-            { text: t("Excluir"), danger: true, onclick: async () => {
-              if (!(await confirmAction(t("Excluir a empresa \"{name}\"?", { name: company.name })))) return;
-              try { await api.companies.remove(company.id); notify(t("Empresa excluída.")); await reload(); }
-              catch (error) { notify(errorMessage(error), true); }
-            } }]))),
-      company.notes && h("p", { className: "muted notes" }, company.notes),
-      own.length ? h("ul", { className: "item-list" }, own.map((p) => {
-        const rule = p.rules.find((r) => r.id === p.current_rule_id);
-        return h("li", { className: "list-item clickable", tabIndex: 0, onclick: () => openProject(area, p.id),
-          onkeydown: (e: KeyboardEvent) => { if (e.key === "Enter") void openProject(area, p.id); } },
-        h("div", { className: "list-main" },
-          h("div", { className: "list-title" }, h("strong", {}, p.name),
-            h("span", { className: "muted" }, rule ? ruleSummary(rule, p.currency) : t("sem regra de valor em vigor"))),
-          h("div", { className: "task-meta" }, h("span", {}, t("{count} em aberto", { count: p.open_tasks || 0 })),
-            p.deadline && h("span", {}, t("Deadline {date}", { date: formatDate(p.deadline) })))),
-        h("span", { className: "chevron", "aria-hidden": "true" }, "›"));
-      })) : h("p", { className: "muted" }, t("Nenhum projeto.")));
-  });
+  if (!companies.length) {             // a project always belongs to a company: register one first
+    return render(area, h("h1", {}, t("Projetos")), h("div", { className: "card empty-state" },
+      h("h2", {}, t("Nenhuma empresa ainda")),
+      h("p", { className: "muted" }, t("Todo projeto é de uma empresa. Cadastre a empresa primeiro.")),
+      h("button", { className: "primary", onclick: () => companyForm(null, reload) }, t("Nova empresa"))));
+  }
+  if (state.companyId && !companies.some((c) => c.id === state.companyId)) state.companyId = "";
+
+  const list = h("div", { id: "project-list" });
+  const company = h("select", { id: "projects-company", onchange: () => { state.companyId = company.value; draw(); } },
+    h("option", { value: "" }, t("Todas as empresas")),
+    companies.map((c) => h("option", { value: c.id, selected: c.id === state.companyId }, c.name)));
+  const draw = () => {
+    const shown = projects.filter((p) => !state.companyId || p.company_id === state.companyId);
+    render(list, shown.length
+      ? h("div", { className: "card list-card" }, h("ul", { className: "item-list" },
+        shown.map((p) => projectRow(p, !state.companyId, () => openProject(area, p.id, toList)))))
+      : h("div", { className: "card empty-state" }, h("h2", {}, t("Nenhum projeto ainda")),
+        h("p", { className: "muted" }, t("Uma empresa pode ter vários projetos, cada um com o seu valor."))));
+  };
+  draw();
 
   render(area,
-    h("div", { className: "row" }, h("h1", {}, t("Empresas e projetos")),
-      h("button", { className: "primary", id: "new-company", onclick: () => companyForm(null, reload) }, t("Nova empresa"))),
-    cards.length ? cards : h("div", { className: "card empty-state" }, h("h2", {}, t("Nenhuma empresa ainda")),
-      h("p", { className: "muted" }, t("Cadastre a empresa para a qual você presta serviço, depois os projetos dela."))));
+    h("div", { className: "row" }, h("h1", {}, t("Projetos")),
+      h("button", { className: "primary", id: "new-project",
+        onclick: () => projectForm(companies, null, state.companyId || companies[0]!.id,
+          (p) => openProject(area, p.id, toList)) }, t("Novo projeto"))),
+    h("div", { className: "card" }, h("div", { className: "filters" },
+      h("div", {}, h("label", { htmlFor: "projects-company" }, t("Empresa")), company))),
+    list);
 }
 
-function companyForm(company: Company | null, done: () => Promise<void>): void {
-  const name = h("input", { id: "c-name", required: true, maxLength: 100, value: company?.name || "" });
-  const notes = h("textarea", { id: "c-notes", rows: 3, maxLength: 2000, value: company?.notes || "" });
-  formDialog(company ? t("Editar empresa") : t("Nova empresa"), [field(t("Nome"), name), field(t("Observações"), notes)],
-    async () => {
-      const body = { name: name.value, notes: notes.value };
-      if (company) await api.companies.update(company.id, body);
-      else await api.companies.create(body);
-      notify(t("Empresa salva."));
-      await done();
-    });
+/** A project in a list: name (and its company), the rule in force, open tasks and deadline. */
+export function projectRow(p: Project, showCompany: boolean, open: () => unknown): HTMLElement {
+  const rule = p.rules.find((r) => r.id === p.current_rule_id);
+  return h("li", { className: "list-item clickable", tabIndex: 0, "data-project": p.name, onclick: open,
+    onkeydown: (e: KeyboardEvent) => { if (e.key === "Enter") void open(); } },
+  h("div", { className: "list-main" },
+    h("div", { className: "list-title" }, h("strong", {}, p.name),
+      h("span", { className: "muted" }, rule ? ruleSummary(rule, p.currency) : t("sem regra de valor em vigor"))),
+    h("div", { className: "task-meta" },
+      showCompany && h("span", { className: "company-name" }, p.company_name),
+      h("span", {}, t("{count} em aberto", { count: p.open_tasks || 0 })),
+      p.deadline && h("span", {}, t("Deadline {date}", { date: formatDate(p.deadline) })))),
+  h("span", { className: "chevron", "aria-hidden": "true" }, "›"));
 }
 
 // ------------------------------------------------------------------ a project's page
-async function openProject(area: HTMLElement, id: string): Promise<void> {
+export async function openProject(area: HTMLElement, id: string, back: Back): Promise<void> {
   render(area, h("p", { className: "notice" }, t("Carregando…")));
   let project: Project, companies: Company[];
   try { [project, companies] = await Promise.all([api.projects.get(id), api.companies.list()]); }
   catch (error) { return render(area, h("p", { className: "notice" }, errorMessage(error))); }
   state.companyId = project.company_id;
   state.projectId = project.id;
-  const redraw = (p: Project) => drawProject(area, p, companies);
-  redraw(project);
+  drawProject(area, project, companies, back);
 }
 
-function drawProject(area: HTMLElement, project: Project, companies: Company[]): void {
-  const redraw = (p: Project) => drawProject(area, p, companies);
+function drawProject(area: HTMLElement, project: Project, companies: Company[], back: Back): void {
+  const redraw = (p: Project) => drawProject(area, p, companies, back);
   const rules = [...project.rules].sort((a, b) => b.starts_at.localeCompare(a.starts_at));
   render(area,
-    h("button", { className: "link back", onclick: () => mount(area) }, `‹ ${t("Empresas e projetos")}`),
+    h("button", { className: "link back", onclick: () => back.back() }, `‹ ${back.label}`),
     h("div", { className: "row" }, h("h1", {}, project.name),
       actionsMenu(project.name, [
         { text: t("Editar projeto"), onclick: () => projectForm(companies, project, project.company_id, redraw) },
@@ -92,7 +94,7 @@ function drawProject(area: HTMLElement, project: Project, companies: Company[]):
           if (!(await confirmAction(t("Excluir o projeto \"{name}\" com todas as tarefas e pagamentos?",
             { name: project.name })))) return;
           try {
-            await api.projects.remove(project.id); notify(t("Projeto excluído.")); state.projectId = ""; await mount(area);
+            await api.projects.remove(project.id); notify(t("Projeto excluído.")); state.projectId = ""; await back.back();
           } catch (error) { notify(errorMessage(error), true); }
         } }])),
     h("div", { className: "card" }, h("dl", { className: "details" },
@@ -136,7 +138,7 @@ export function ruleSummary(rule: Rule, currency: string): string {
 }
 
 // ------------------------------------------------------------------ forms
-function projectForm(companies: Company[], project: Project | null, companyId: string,
+export function projectForm(companies: Company[], project: Project | null, companyId: string,
   done: (p: Project) => void | Promise<void>): void {
   const company = h("select", { id: "p-company", required: true },
     companies.map((c) => h("option", { value: c.id, selected: c.id === companyId }, c.name)));
