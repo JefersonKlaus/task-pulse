@@ -196,6 +196,26 @@ const SVG = "http://www.w3.org/2000/svg";
 const EYE = "M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z M12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6z";
 const EYE_OFF = "M3 3l18 18 M10.6 5.1A10.7 10.7 0 0 1 12 5c7 0 11 7 11 7a18 18 0 0 1-3.2 4.1 M6.6 6.6A18 18 0 0 0 1 12s4 7 11 7a10.6 10.6 0 0 0 5.4-1.6 M9.9 9.9a3 3 0 0 0 4.2 4.2";
 
+/** Stroke icons (24x24 paths), drawn in the text color. */
+export const ICONS = {
+  tasks: "M9 11l3 3 8-8 M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h9",
+  billing: "M4 6h16a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2z M12 10a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5z",
+  payments: "M4 19V9 M10 19V5 M16 19v-7 M22 19H2",
+  projects: "M3 21h18 M5 21V7l7-4 7 4v14 M9 21v-6h6v6",
+  logout: "M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4 M16 17l5-5-5-5 M21 12H9",
+} as const;
+
+export function icon(name: keyof typeof ICONS): SVGSVGElement {
+  const svg = document.createElementNS(SVG, "svg");
+  svg.setAttribute("viewBox", "0 0 24 24");
+  svg.setAttribute("aria-hidden", "true");
+  svg.setAttribute("class", "icon-svg");
+  const path = document.createElementNS(SVG, "path");
+  path.setAttribute("d", ICONS[name]);
+  svg.append(path);
+  return svg;
+}
+
 /** A password input with an eye button that shows / hides what was typed. */
 export function revealable(input: HTMLInputElement): HTMLElement {
   const path = document.createElementNS(SVG, "path");

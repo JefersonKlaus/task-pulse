@@ -24,7 +24,7 @@ resource "aws_cloudfront_response_headers_policy" "security" {
   security_headers_config {
     content_security_policy {
       override                = true
-      content_security_policy = "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self' https://cognito-idp.${var.region}.amazonaws.com https://*.execute-api.${var.region}.amazonaws.com; frame-ancestors 'none'; base-uri 'none'; form-action 'self'"
+      content_security_policy = "default-src 'self'; script-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://cognito-idp.${var.region}.amazonaws.com https://*.execute-api.${var.region}.amazonaws.com; frame-ancestors 'none'; base-uri 'none'; form-action 'self'"
     }
 
     content_type_options {

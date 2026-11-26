@@ -71,7 +71,7 @@ def run():
         errors.clear()                  # the browser logged Cognito's 400 for the wrong password, on purpose
 
         # a company and its project: R$ 100/h, last hour R$ 150/h if approved, only approved are paid
-        page.click("nav >> text=Empresas e projetos")
+        page.click("nav >> text=Projetos")
         page.click("#new-company")
         page.fill("#c-name", "Etho")
         page.click("dialog >> text=Salvar")
@@ -157,9 +157,9 @@ def run_without_login():
         expect(page.locator("[data-task]")).to_have_count(3)                          # the open demo tasks
         width = page.evaluate("document.documentElement.scrollWidth")
         assert width <= 390, f"the page scrolls sideways on a phone ({width}px)"
-        page.click("#menu-toggle")
-        expect(page.locator("#local-mode")).to_be_visible()
-        page.click("nav >> text=Empresas e projetos")
+        expect(page.locator("#top-bar .local-mode")).to_be_visible()                 # no login here
+        expect(page.locator("nav")).to_be_visible()                                   # the bottom bar
+        page.click("nav >> text=Projetos")
         expect(page.locator("[data-company]")).to_have_count(2)
         browser.close()
     server.shutdown()
