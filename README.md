@@ -15,15 +15,16 @@ The app's screens are in Brazilian Portuguese; code and docs are in English.
 
 Made for the phone first: one column, the menu at the bottom, every button big enough for a thumb.
 
-| Tarefas | Faturamento | Projeto e regras | Entrar |
+| Tarefas | Faturamento | Projeto e regras | Criar conta |
 |---|---|---|---|
-| ![Open tasks as cards: time worked, + Tempo and Concluir](docs/screenshots/phone-tasks.png) | ![Billing: what should be received, the tasks with a box to untick the ones that won't be paid, and the form to register what was received](docs/screenshots/phone-billing.png) | ![A project with its pricing rule in force: hourly rate, flat last hour, only approved tasks paid, bonus tiers](docs/screenshots/phone-project.png) | ![Login by phone and password](docs/screenshots/phone-login.png) |
+| ![Open tasks as cards: time worked, + Tempo and Concluir](docs/screenshots/phone-tasks.png) | ![Billing: what should be received, the tasks with a box to untick the ones that won't be paid, and the form to register what was received](docs/screenshots/phone-billing.png) | ![A project with its pricing rule in force: hourly rate, flat last hour, only approved tasks paid, bonus tiers](docs/screenshots/phone-project.png) | ![Sign-up: name, e-mail, password twice](docs/screenshots/phone-signup.png) |
 
 <p>
+  <img src="docs/screenshots/phone-login.png" width="24%" alt="Login by e-mail and password">
   <img src="docs/screenshots/phone-tasks-dark.png" width="24%" alt="Tarefas in dark mode">
 </p>
 
-The phone follows the system's dark mode (above). From 1024px wide the menu becomes a sidebar and the
+Login by e-mail and password, and the phone follows the system's dark mode (above). From 1024px wide the menu becomes a sidebar and the
 lists become tables:
 
 ![Tarefas on a wide screen](docs/screenshots/wide-tasks.png)
@@ -87,7 +88,8 @@ files are not in git.
 frontend/
   package.json, tsconfig.json   TypeScript, pinned; `npm run build | typecheck | watch`
   public/index.html, style.css  the page (public/js/ is the build output)
-  src/app.ts            menu and login screen
+  src/app.ts            the menu (once logged in)
+  src/screens/login.ts  Entrar, Criar conta, Confirmar e-mail (the code), first-access password
   src/api.ts            every call to the backend, typed
   src/auth.ts           Cognito login (tokens)
   src/config.ts         where the API is (public/js/config.js is written by the deploy)
@@ -227,13 +229,18 @@ table** (every login and all the data): that stops it before anything is applied
 4. Recommended: *Deployment branches* = only `main` on both Environments, and *Required reviewers*
    (you approve each deploy) on `producao`.
 
-### Create a login
+### Logins
 
-Actions → *Create user* → choose the environment, type the person's name and the phone (DDD + number,
-digits only, e.g. `11987654321`). The workflow creates the login with a ready, permanent password and
-shows it in the run's summary (once; keep the repository private, since whoever can open the run sees
-it). There is no open sign-up. For a phone that already has a login, tick *reset_password* to give it a
-new password.
+The login is the **e-mail and a password**. Anyone can create an account on the site (*Criar conta*:
+name, e-mail, password with 10+ characters, upper and lower case and a number). Cognito e-mails a
+6-digit code, and the account only logs in after the code is typed (*Reenviar código* sends another).
+Each account sees only its own data. Cognito's own sender is used: no setup, but about 50 e-mails a
+day; for more, configure SES in [infra/cognito.tf](infra/cognito.tf).
+
+To create a login by hand: Actions → *Create user* → choose the environment, type the person's name and
+e-mail. The workflow creates it with the e-mail already confirmed and a ready, permanent password, shown
+in the run's summary (once; keep the repository private, since whoever can open the run sees it). For an
+e-mail that already has a login, tick *reset_password* to give it a new password.
 
 ## Security and cost
 

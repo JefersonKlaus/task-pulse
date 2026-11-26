@@ -5,8 +5,13 @@ import { CONFIG } from "./config.js";
 
 const STORAGE_KEY = "pulse.tokens";
 const MESSAGES: Record<string, string> = {
-  NotAuthorizedException: "Celular ou senha incorretos.",
-  UserNotFoundException: "Celular ou senha incorretos.",
+  NotAuthorizedException: "E-mail ou senha incorretos.",
+  UserNotFoundException: "E-mail ou senha incorretos.",
+  UsernameExistsException: "Já existe uma conta com este e-mail. Entre com ela.",
+  InvalidParameterException: "E-mail inválido.",
+  CodeMismatchException: "Código incorreto. Confira o e-mail e tente de novo.",
+  ExpiredCodeException: "Código expirado: peça um novo.",
+  CodeDeliveryFailureException: "Não foi possível enviar o e-mail. Confira o endereço.",
   InvalidPasswordException: "A senha precisa ter 10 caracteres, com maiúscula, minúscula e número.",
   TooManyRequestsException: "Muitas tentativas. Espere um pouco.",
   LimitExceededException: "Muitas tentativas. Espere um pouco.",
@@ -49,20 +54,50 @@ function load(): Tokens | null {
   return cached;
 }
 
-/** "11987654321" (DDD + number, digits only) -> "+5511987654321", the login's Cognito username. */
-export function phoneToUsername(digits: string): string {
-  if (!/^[1-9]{2}\d{8,9}$/.test(digits)) throw new Error("Celular inválido: digite DDD + número, só os dígitos.");
-  return `+55${digits}`;
+/** The e-mail is the login: trimmed and in lower case, so "Ana@X.com " and "ana@x.com" are the same account. */
+export function normalizeEmail(email: string): string {
+  const value = email.trim().toLowerCase();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value) || value.length > 254) throw new Error("E-mail inválido.");
+  return value;
 }
 
-/** Returns {challenge} if Cognito asks for a new password (first access), otherwise stores the tokens. */
-export async function signIn(phone: string, password: string): Promise<{ challenge?: Challenge }> {
-  const username = phoneToUsername(phone);
-  const r = await cognito("InitiateAuth", { ClientId: CONFIG.clientId,
-    AuthFlow: "USER_PASSWORD_AUTH", AuthParameters: { USERNAME: username, PASSWORD: password } });
+/** What signIn can answer besides "signed in": a new password to choose (a login created by the
+ *  administrator), or an account whose e-mail was never confirmed (it needs the code). */
+export interface SignInResult { challenge?: Challenge; unconfirmed?: boolean }
+
+export async function signIn(email: string, password: string): Promise<SignInResult> {
+  const username = normalizeEmail(email);
+  let r: CognitoAnswer;
+  try {
+    r = await cognito("InitiateAuth", { ClientId: CONFIG.clientId,
+      AuthFlow: "USER_PASSWORD_AUTH", AuthParameters: { USERNAME: username, PASSWORD: password } },
+    { ...MESSAGES, UserNotConfirmedException: "UNCONFIRMED" });
+  } catch (error) {
+    if (error instanceof Error && error.message === "UNCONFIRMED") return { unconfirmed: true };
+    throw error;
+  }
   if (r.ChallengeName === "NEW_PASSWORD_REQUIRED") return { challenge: { session: r.Session, username } };
   store(r.AuthenticationResult as AuthResult);
   return {};
+}
+
+/** Creates the account. Cognito e-mails a 6-digit code; the account can only log in after confirmSignUp. */
+export async function signUp(name: string, email: string, password: string): Promise<{ sentTo: string }> {
+  const username = normalizeEmail(email);
+  const r = await cognito("SignUp", { ClientId: CONFIG.clientId, Username: username, Password: password,
+    UserAttributes: [{ Name: "email", Value: username }, { Name: "name", Value: name.trim() }] },
+  MESSAGES, "Não foi possível criar a conta. Tente de novo.");
+  return { sentTo: r.CodeDeliveryDetails?.Destination || username };
+}
+
+export async function confirmSignUp(email: string, code: string): Promise<void> {
+  await cognito("ConfirmSignUp", { ClientId: CONFIG.clientId, Username: normalizeEmail(email),
+    ConfirmationCode: code.replace(/\s/g, "") }, MESSAGES, "Não foi possível confirmar. Tente de novo.");
+}
+
+export async function resendCode(email: string): Promise<void> {
+  await cognito("ResendConfirmationCode", { ClientId: CONFIG.clientId, Username: normalizeEmail(email) },
+    MESSAGES, "Não foi possível reenviar o código. Tente de novo.");
 }
 
 export async function setNewPassword({ session, username }: Challenge, password: string): Promise<void> {

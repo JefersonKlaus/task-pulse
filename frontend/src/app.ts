@@ -1,8 +1,9 @@
-// The menu and the login screen.
+// The menu, once logged in. The screens before it (Entrar, Criar conta) are in screens/login.ts.
 import { CONFIG } from "./config.js";
-import { type Challenge, isSignedIn, setNewPassword, signIn, signOut } from "./auth.js";
-import { errorMessage, h, ICONS, icon, notify, render, revealable, whileDisabled } from "./util.js";
+import { isSignedIn, signOut } from "./auth.js";
+import { h, ICONS, icon, render } from "./util.js";
 import { mount as billing } from "./screens/billing.js";
+import { loginScreen } from "./screens/login.js";
 import { mount as payments } from "./screens/payments.js";
 import { mount as projects } from "./screens/projects.js";
 import { mount as tasks } from "./screens/tasks.js";
@@ -12,37 +13,6 @@ type Mount = (area: HTMLElement) => Promise<void>;
 const SCREENS: [string, Mount, keyof typeof ICONS][] = [            // [name in the menu, mount, icon]
   ["Tarefas", tasks, "tasks"], ["Faturamento", billing, "billing"], ["Pagamentos", payments, "payments"],
   ["Projetos", projects, "projects"]];
-
-function loginScreen(challenge: Challenge | null = null): void {
-  // DDD + number, digits only (no mask): 11987654321
-  const phone = h("input", { id: "l-phone", type: "tel", inputMode: "numeric", autocomplete: "tel-national",
-    placeholder: "11987654321", maxLength: 11, required: true, title: "DDD + número, só os dígitos (10 ou 11)" });
-  const password = h("input", { id: "l-password", type: "password", required: true,
-    autocomplete: challenge ? "new-password" : "current-password" });
-  const button = h("button", { className: "primary", type: "submit" }, challenge ? "Definir senha" : "Entrar");
-  const form = h("form", { className: "card login" },
-    h("div", { className: "login-brand" }, h("span", { className: "logo", "aria-hidden": "true" }),
-      h("h1", {}, "Task Pulse"),
-      h("p", {}, "Cada hora trabalhada, cada tarefa aprovada e quanto ela vale.")),
-    challenge && h("p", { className: "muted" },
-      "Primeiro acesso: escolha a sua senha (10+ caracteres, com maiúscula, minúscula e número)."),
-    !challenge && [h("label", { htmlFor: "l-phone" }, "Celular (DDD + número)"), phone],
-    h("label", { htmlFor: "l-password" }, challenge ? "Nova senha" : "Senha"), revealable(password),
-    h("div", { className: "actions" }, button));
-  form.addEventListener("submit", (e) => {
-    e.preventDefault();
-    void whileDisabled(button, async () => {
-      try {
-        if (challenge) { await setNewPassword(challenge, password.value); return start(); }
-        const r = await signIn(phone.value.trim(), password.value);
-        if (r.challenge) return loginScreen(r.challenge);
-        start();
-      } catch (error) { notify(errorMessage(error), true); }
-    });
-  });
-  render(content, form);
-  (challenge ? password : phone).focus();
-}
 
 function start(): void {
   // Phones and tablets: the menu is a bar fixed at the bottom and the account sits in the top bar.
@@ -73,4 +43,4 @@ function start(): void {
 if (!CONFIG.apiUrl || (!CONFIG.clientId && !CONFIG.skipLogin)) {
   render(content, h("p", { className: "notice" }, "Sistema ainda não configurado (js/config.js vazio)."));
 } else if (isSignedIn()) start();
-else loginScreen();
+else loginScreen(start);
