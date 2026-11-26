@@ -172,9 +172,11 @@ Rules worth knowing:
   deleted; deleting the payment opens its tasks again. Should receive = paid tasks + bonus; the
   difference is received − should receive.
 - An external id is unique per project (ignoring case); blank is allowed for any number of tasks.
-- DynamoDB, one table: `PK = OWNER#<user>`, `SK = COMPANY#<id>`, `PROJECT#<id>` (rules inside),
-  `TASK#<project id>#<id>`, `PAY#<project id>#<id>`. A payment marks its tasks with `BatchWriteItem`,
-  25 items per call.
+- DynamoDB, single-table design: `PK = OWNER#<user>`, `SK = COMPANY#<id>`, `PROJECT#<id>` (rules
+  inside, as a list), `TASK#<project id>#<id>`, `PAY#<project id>#<id>`. Every field is its own attribute
+  in DynamoDB's types (`name` S, `minutes` and `*_cents` N, `paid_only_if_approved` BOOL, `time_log` and
+  `rules` L of M), plus `entity` (COMPANY, PROJECT, TASK, PAYMENT); a field with no value is left out.
+  A payment marks its tasks with `BatchWriteItem`, 25 items per call.
 
 ### Local
 
