@@ -2,25 +2,27 @@
 <html lang="pt-BR">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#111827">
   <title>Task Pulse</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Space+Grotesk:wght@500;600;700&amp;display=swap">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <!-- Phones: a top bar with the ☰ button that opens the sidebar as a drawer. Wide screens: a fixed sidebar. -->
+  <!-- Phones and tablets: a dark top bar (brand + account) and the menu as a bar fixed at the bottom.
+       Wide screens (1024px+): no top bar; the menu is a dark sidebar on the left. -->
   <header id="top-bar" hidden>
-    <button id="menu-toggle" class="icon" aria-label="Abrir menu" aria-controls="sidebar" aria-expanded="false">☰</button>
-    <strong>Task Pulse</strong>
+    <span class="brand"><span class="logo" aria-hidden="true"></span>Task Pulse</span>
+    <div id="top-account" class="account"></div>
   </header>
   <div class="layout">
     <aside id="sidebar" aria-label="Menu" hidden>
-      <strong class="brand">Task Pulse</strong>
+      <span class="brand"><span class="logo" aria-hidden="true"></span>Task Pulse</span>
       <nav id="menu"></nav>
-      <div class="sidebar-footer">
-        <button id="logout" class="link">Sair</button>
-      </div>
+      <div class="sidebar-footer account" id="side-account"></div>
     </aside>
-    <div id="backdrop" hidden></div>
     <main id="content"><p class="notice">Carregando…</p></main>
   </div>
   <div id="toasts" role="status" aria-live="polite"></div>

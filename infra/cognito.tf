@@ -1,14 +1,32 @@
-# The login is the phone number (+55 + DDD + number). Only you create the logins: Actions -> Create user.
+# The login is the e-mail and a password. Anyone can create an account on the site (Criar conta): Cognito
+# e-mails a 6-digit code and the account only logs in after it is confirmed. Each account sees only its
+# own data (the API takes the user from the token). Actions -> Create user also creates one by hand.
 resource "aws_cognito_user_pool" "login" {
   # The create-user workflow looks the pool up by this name.
   name                     = "${local.prefix}-login"
-  username_attributes      = ["phone_number"]
+  username_attributes      = ["email"]
   auto_verified_attributes = ["email"]
   deletion_protection      = var.environment == "prod" ? "ACTIVE" : "INACTIVE"
 
-  # Only you create the accounts (there is no open sign-up): Actions -> Create user.
+  username_configuration {
+    case_sensitive = false # Ana@x.com and ana@x.com are the same login
+  }
+
+  # Open sign-up from the site.
   admin_create_user_config {
-    allow_admin_create_user_only = true
+    allow_admin_create_user_only = false
+  }
+
+  # Cognito's own e-mail sender: no SES to set up, but limited to about 50 e-mails a day per account. For
+  # more, configure SES and set email_sending_account = "DEVELOPER" with its source_arn.
+  email_configuration {
+    email_sending_account = "COGNITO_DEFAULT"
+  }
+
+  verification_message_template {
+    default_email_option = "CONFIRM_WITH_CODE"
+    email_subject        = "Task Pulse: seu código de confirmação"
+    email_message        = "Seu código para confirmar o e-mail no Task Pulse é {####}. Se não foi você, ignore este e-mail."
   }
 
   password_policy {
@@ -36,7 +54,8 @@ resource "aws_cognito_user_pool_client" "site" {
   explicit_auth_flows = ["ALLOW_USER_PASSWORD_AUTH", "ALLOW_REFRESH_TOKEN_AUTH"]
 
   prevent_user_existence_errors = "ENABLED"
-  write_attributes              = ["email", "name"]
+  read_attributes               = ["email", "email_verified", "name", "locale"]
+  write_attributes              = ["email", "name", "locale"] # locale: the language chosen in Configurações
   enable_token_revocation       = true
 
   access_token_validity  = 60

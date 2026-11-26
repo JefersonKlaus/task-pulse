@@ -9,7 +9,30 @@ and a period, lists every task concluded in it with its value, lets you untick t
 **not** be paid and register what was received; the app then shows what was paid, what wasn't, what
 should have been received and what was received.
 
-The app's screens are in Brazilian Portuguese; code and docs are in English.
+The app speaks **Portuguese (Brazil) and English**: each person chooses in *Configurações / Settings*. Code and docs are in English.
+
+## What it looks like
+
+Made for the phone first: one column, the menu at the bottom, every button big enough for a thumb.
+
+| Tarefas | Faturamento | Projeto e regras | Criar conta |
+|---|---|---|---|
+| ![Open tasks as cards: time worked, + Tempo and Concluir](docs/screenshots/phone-tasks.png) | ![Billing: what should be received, the tasks with a box to untick the ones that won't be paid, and the form to register what was received](docs/screenshots/phone-billing.png) | ![A project with its pricing rule in force: hourly rate, flat last hour, only approved tasks paid, bonus tiers](docs/screenshots/phone-project.png) | ![Sign-up: name, e-mail, password twice](docs/screenshots/phone-signup.png) |
+
+<p>
+  <img src="docs/screenshots/phone-login.png" width="24%" alt="Login by e-mail and password">
+  <img src="docs/screenshots/phone-settings.png" width="24%" alt="Settings: language, name and password">
+  <img src="docs/screenshots/phone-tasks-en.png" width="24%" alt="Tasks in English">
+  <img src="docs/screenshots/phone-tasks-dark.png" width="24%" alt="Tarefas in dark mode">
+</p>
+
+Login by e-mail and password; *Configurações* (the gear, apart from the menu) with the language, the name and the password; the app in English; and the system's dark mode (above). From 1024px wide the menu becomes a sidebar and the
+lists become tables:
+
+![Tarefas on a wide screen](docs/screenshots/wide-tasks.png)
+![Faturamento on a wide screen](docs/screenshots/wide-billing.png)
+
+These pictures come from the local server's demo data: `python dev.py screenshots` takes them again.
 
 ## Run it locally
 
@@ -32,6 +55,7 @@ when you stop the server.
 python dev.py test    # backend tests + TypeScript type check (seconds)
 python dev.py e2e     # builds the frontend, then the browser test in a real Chromium
 python dev.py all     # both: what CI runs
+python dev.py screenshots   # the pictures above, again (docs/screenshots)
 ```
 
 | Tests | Where |
@@ -66,9 +90,11 @@ files are not in git.
 frontend/
   package.json, tsconfig.json   TypeScript, pinned; `npm run build | typecheck | watch`
   public/index.html, style.css  the page (public/js/ is the build output)
-  src/app.ts            menu and login screen
+  src/app.ts            the menu (once logged in)
+  src/screens/login.ts  Entrar, Criar conta, Confirmar e-mail (the code), first-access password
   src/api.ts            every call to the backend, typed
-  src/auth.ts           Cognito login (tokens)
+  src/auth.ts           Cognito login (tokens), sign-up, the login's name, language and password
+  src/i18n.ts           the languages: t("texto") in Portuguese, its English in EN
   src/config.ts         where the API is (public/js/config.js is written by the deploy)
   src/types.ts          what the API answers
   src/util.ts           DOM helpers, money (cents), time (minutes), dates, dialogs
@@ -77,6 +103,7 @@ frontend/
   src/screens/projects.ts  Empresas e projetos: companies, projects, pricing rules
   src/screens/billing.ts   Faturamento: a project's period, untick what won't be paid, register what was received
   src/screens/payments.ts  Pagamentos: every payment, should receive x received
+  src/screens/settings.ts  Configurações (apart from the menu): language, name, password
 ```
 
 The frontend doesn't know whether the backend is AWS or local: it calls `CONFIG.apiUrl`. The deploy
@@ -95,6 +122,7 @@ backend/
     domain/pricing.py  what a task is worth by its rule; the period's bonus
     ports.py           what use cases need: the Repository
     application.py     rules shared by several use cases (clock, lookups, the billing of a period)
+    i18n.py            the API's error messages in English (Accept-Language: en)
     adapters/          DynamoDB, API Gateway input (login, ids, errors)
   lambdas/<action>/    list_companies, create_company, update_company, delete_company,
                        list_projects, get_project, create_project, update_project, delete_project,
@@ -149,9 +177,11 @@ Rules worth knowing:
   deleted; deleting the payment opens its tasks again. Should receive = paid tasks + bonus; the
   difference is received − should receive.
 - An external id is unique per project (ignoring case); blank is allowed for any number of tasks.
-- DynamoDB, one table: `PK = OWNER#<user>`, `SK = COMPANY#<id>`, `PROJECT#<id>` (rules inside),
-  `TASK#<project id>#<id>`, `PAY#<project id>#<id>`. A payment marks its tasks with `BatchWriteItem`,
-  25 items per call.
+- DynamoDB, single-table design: `PK = OWNER#<user>`, `SK = COMPANY#<id>`, `PROJECT#<id>` (rules
+  inside, as a list), `TASK#<project id>#<id>`, `PAY#<project id>#<id>`. Every field is its own attribute
+  in DynamoDB's types (`name` S, `minutes` and `*_cents` N, `paid_only_if_approved` BOOL, `time_log` and
+  `rules` L of M), plus `entity` (COMPANY, PROJECT, TASK, PAYMENT); a field with no value is left out.
+  A payment marks its tasks with `BatchWriteItem`, 25 items per call.
 
 ### Local
 
@@ -206,13 +236,29 @@ table** (every login and all the data): that stops it before anything is applied
 4. Recommended: *Deployment branches* = only `main` on both Environments, and *Required reviewers*
    (you approve each deploy) on `producao`.
 
-### Create a login
+### Languages
 
-Actions → *Create user* → choose the environment, type the person's name and the phone (DDD + number,
-digits only, e.g. `11987654321`). The workflow creates the login with a ready, permanent password and
-shows it in the run's summary (once; keep the repository private, since whoever can open the run sees
-it). There is no open sign-up. For a phone that already has a login, tick *reset_password* to give it a
-new password.
+Every text is written in Portuguese in the code and translated where it is shown:
+[frontend/src/i18n.ts](frontend/src/i18n.ts) has the English of each screen's text, and
+[backend/core/pulse_core/i18n.py](backend/core/pulse_core/i18n.py) the English of each API error (the site
+sends `Accept-Language`). Money, numbers and dates follow the language too (R$ 1.234,56 · 20/11/2026 or
+R$1,234.56 · 11/20/2026). The first time, the app takes the browser's language; the choice is kept in the
+browser and in the login (Cognito's `locale`), so it follows the person to another device. Tests fail if a
+text has no English (`local/tests/test_frontend_i18n.py`, `local/tests/test_i18n.py`). To add a text, wrap
+it in `t("...")` and add its English to `EN`.
+
+### Logins
+
+The login is the **e-mail and a password**. Anyone can create an account on the site (*Criar conta*:
+name, e-mail, password with 10+ characters, upper and lower case and a number). Cognito e-mails a
+6-digit code, and the account only logs in after the code is typed (*Reenviar código* sends another).
+Each account sees only its own data. Cognito's own sender is used: no setup, but about 50 e-mails a
+day; for more, configure SES in [infra/cognito.tf](infra/cognito.tf).
+
+To create a login by hand: Actions → *Create user* → choose the environment, type the person's name and
+e-mail. The workflow creates it with the e-mail already confirmed and a ready, permanent password, shown
+in the run's summary (once; keep the repository private, since whoever can open the run sees it). For an
+e-mail that already has a login, tick *reset_password* to give it a new password.
 
 ## Security and cost
 

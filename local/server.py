@@ -32,7 +32,7 @@ from seed import seed as load_demo_data             # noqa: E402
 
 LOCAL_OWNER = "local-user"                          # the user every request belongs to without login
 # Same as CloudFront's (infra/frontend.tf): if the site breaks with it, the test catches it before deploy.
-CSP = ("default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; "
+CSP = ("default-src 'self'; script-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; "
        "connect-src 'self' https://cognito-idp.sa-east-1.amazonaws.com; frame-ancestors 'none'; "
        "base-uri 'none'; form-action 'self'")
 CONTENT_TYPES = {".html": "text/html", ".css": "text/css", ".js": "text/javascript", ".svg": "image/svg+xml",
@@ -52,6 +52,7 @@ class RequestHandler(BaseHTTPRequestHandler):
     def _api(self):
         url = urlparse(self.path)
         event = {"rawPath": url.path[len("/api"):], "requestContext": {"http": {"method": self.command}},
+                 "headers": {"accept-language": self.headers.get("Accept-Language", "")},
                  "queryStringParameters": {k: v[0] for k, v in parse_qs(url.query).items()} or None,
                  "body": self.rfile.read(int(self.headers.get("Content-Length") or 0)).decode()}
         claims = self._claims()

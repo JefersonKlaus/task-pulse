@@ -1,6 +1,7 @@
 // The filters every page shares: company, project and period (month or week, with ‹ › to move).
 // They are kept while the app is open, so going from Tarefas to Faturamento keeps the same choice.
 import type { Period } from "../api.js";
+import { locale, t } from "../i18n.js";
 import type { Company, Project } from "../types.js";
 import { addDays, h, today } from "../util.js";
 
@@ -12,9 +13,6 @@ export const state = {
   kind: "month" as PeriodKind,
   anchor: today(),            // any day inside the period shown
 };
-
-const MONTHS = ["janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "agosto", "setembro",
-  "outubro", "novembro", "dezembro"];
 
 /** The month or the week (Monday to Sunday) that contains `anchor`. */
 export function periodOf(kind: PeriodKind, anchor: string): Period {
@@ -31,8 +29,12 @@ export function periodOf(kind: PeriodKind, anchor: string): Period {
 
 export function periodLabel(kind: PeriodKind, anchor: string): string {
   const { from, to } = periodOf(kind, anchor);
-  if (kind === "month") return `${MONTHS[Number(from.slice(5, 7)) - 1]} de ${from.slice(0, 4)}`;
-  return `${from.slice(8, 10)}/${from.slice(5, 7)} a ${to.slice(8, 10)}/${to.slice(5, 7)}/${to.slice(0, 4)}`;
+  if (kind === "month") {                    // "novembro de 2026" / "November 2026"
+    return new Date(`${from}T12:00:00Z`).toLocaleString(locale(), { month: "long", year: "numeric", timeZone: "UTC" });
+  }
+  const short = (iso: string) => new Date(`${iso}T12:00:00Z`).toLocaleString(locale(),
+    { day: "2-digit", month: "2-digit", timeZone: "UTC" });
+  return t("{from} a {to}", { from: short(from), to: `${short(to)}/${to.slice(0, 4)}` });
 }
 
 export const currentPeriod = (): Period => periodOf(state.kind, state.anchor);
@@ -69,13 +71,13 @@ export function filterBar({ companies, projects, requireProject = false, showPer
     if (requireProject) state.projectId = visible()[0]?.id || "";
     drawProjects();
     onchange();
-  } }, h("option", { value: "" }, "Todas as empresas"),
+  } }, h("option", { value: "" }, t("Todas as empresas")),
   companies.map((c) => h("option", { value: c.id, selected: c.id === state.companyId }, c.name)));
 
   const project = h("select", { id: "filter-project", onchange: () => { state.projectId = project.value; onchange(); } });
   const drawProjects = () => {
     project.replaceChildren(...[
-      !requireProject && h("option", { value: "" }, "Todos os projetos"),
+      !requireProject && h("option", { value: "" }, t("Todos os projetos")),
       ...visible().map((p) => h("option", { value: p.id, selected: p.id === state.projectId },
         state.companyId ? p.name : `${p.name} · ${p.company_name}`)),
     ].filter((o): o is HTMLOptionElement => Boolean(o)));
@@ -87,22 +89,22 @@ export function filterBar({ companies, projects, requireProject = false, showPer
     state.kind = kind.value as PeriodKind;
     drawLabel();
     onchange();
-  } }, h("option", { value: "month", selected: state.kind === "month" }, "Mês"),
-  h("option", { value: "week", selected: state.kind === "week" }, "Semana"));
+  } }, h("option", { value: "month", selected: state.kind === "month" }, t("Mês")),
+  h("option", { value: "week", selected: state.kind === "week" }, t("Semana")));
   const label = h("strong", { id: "period-label", className: "period-label" });
   const drawLabel = () => { label.textContent = periodLabel(state.kind, state.anchor); };
   drawLabel();
   const move = (direction: number) => () => { shift(direction); drawLabel(); onchange(); };
   const period = h("div", { className: "period" },
-    h("button", { className: "secondary small", "aria-label": "Período anterior", onclick: move(-1) }, "‹"),
+    h("button", { className: "secondary small", "aria-label": t("Período anterior"), onclick: move(-1) }, "‹"),
     kind,
-    h("button", { className: "secondary small", "aria-label": "Próximo período", onclick: move(1) }, "›"),
+    h("button", { className: "secondary small", "aria-label": t("Próximo período"), onclick: move(1) }, "›"),
     h("button", { className: "secondary small", onclick: () => { state.anchor = today(); drawLabel(); onchange(); } },
-      "Hoje"));
+      t("Hoje")));
 
   return h("div", { className: "card" },
     h("div", { className: "filters" },
-      h("div", {}, h("label", { htmlFor: "filter-company" }, "Empresa"), company),
-      h("div", {}, h("label", { htmlFor: "filter-project" }, "Projeto"), project),
-      showPeriod && h("div", { className: "period-cell" }, h("label", {}, "Período: ", label), period)));
+      h("div", {}, h("label", { htmlFor: "filter-company" }, t("Empresa")), company),
+      h("div", {}, h("label", { htmlFor: "filter-project" }, t("Projeto")), project),
+      showPeriod && h("div", { className: "period-cell" }, h("label", {}, t("Período:"), " ", label), period)));
 }

@@ -8,6 +8,7 @@ TypeScript, compiled by tsc). Python tools go inside .venv/, Node's inside front
     python dev.py test      backend tests and the TypeScript type check (quick)
     python dev.py e2e       the browser test (a real Chromium)
     python dev.py all       test + e2e: what CI runs, except Terraform
+    python dev.py screenshots   the README's pictures (docs/screenshots), with the demo data
 """
 from __future__ import annotations
 
@@ -88,6 +89,10 @@ def e2e(args: argparse.Namespace) -> int:
     return build(args) or run(python(), "local/e2e.py")
 
 
+def screenshots(args: argparse.Namespace) -> int:
+    return build(args) or run(python(), "local/screenshots.py")
+
+
 def all_checks(args: argparse.Namespace) -> int:
     return test(args) or e2e(args)
 
@@ -105,8 +110,10 @@ def main() -> int:
     commands.add_parser("test", help="backend tests and TypeScript type check")
     commands.add_parser("e2e", help="the browser test")
     commands.add_parser("all", help="test + e2e")
+    commands.add_parser("screenshots", help="the README's pictures, in docs/screenshots")
     args = parser.parse_args()
-    handlers = {"setup": setup, "build": build, "serve": serve, "test": test, "e2e": e2e, "all": all_checks}
+    handlers = {"setup": setup, "build": build, "serve": serve, "test": test, "e2e": e2e, "all": all_checks,
+                "screenshots": screenshots}
     return handlers[args.command](args)
 
 

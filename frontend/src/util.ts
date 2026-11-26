@@ -1,4 +1,5 @@
 // Small helpers. Text coming from the user ALWAYS goes in as text (never as HTML).
+import { lang, locale, t } from "./i18n.js";
 
 export type Child = Node | string | number | null | undefined | false | Child[];
 type Props = Record<string, unknown>;
@@ -36,22 +37,24 @@ export function notify(text: string, isError = false): void {
 }
 
 export const errorMessage = (error: unknown): string =>
-  error instanceof Error ? error.message : "Algo deu errado. Tente de novo.";
+  error instanceof Error ? error.message : t("Algo deu errado. Tente de novo.");
 
 // ------------------------------------------------------------------ money (integer cents)
 export const CURRENCIES = ["BRL", "USD", "EUR"] as const;
 export type Currency = (typeof CURRENCIES)[number];
 
 export const formatMoney = (cents: number, currency: string = "BRL"): string =>
-  (cents / 100).toLocaleString("pt-BR", { style: "currency", currency });
+  (cents / 100).toLocaleString(locale(), { style: "currency", currency });
 
-/** 123456 -> "1.234,56": how an amount is shown in a field, ready to be read back by toCents. */
+/** 123456 -> "1.234,56" (Portuguese) or "1,234.56" (English): an amount in a field, read back by toCents. */
 export const centsToText = (cents: number | null | undefined): string =>
-  cents == null ? "" : (cents / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  cents == null ? "" : (cents / 100).toLocaleString(locale(), { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-/** "80,50", "1.200", "R$ 1.200,00" or "US$ 90" (Brazilian format) -> integer cents. null if it is not an amount. */
+/** "80,50", "1.200", "R$ 1.200,00" (Portuguese) or "80.50", "1,200", "$1,200.00" (English) -> integer cents.
+ *  null if it is not an amount. */
 export function toCents(text: string): number | null {
-  const cleaned = String(text).trim().replace(/\s/g, "").replace(/^(R\$|US\$|€|\$)/, "");
+  let cleaned = String(text).trim().replace(/\s/g, "").replace(/^(R\$|US\$|€|\$)/, "");
+  if (lang() === "en") cleaned = cleaned.replace(/[.,]/g, (c) => (c === "." ? "," : "."));   // to the Brazilian form
   if (!/^\d{1,3}(\.\d{3})*(,\d{1,2})?$|^\d+(,\d{1,2})?$/.test(cleaned)) return null;
   const [whole, cents = ""] = cleaned.replace(/\./g, "").split(",");
   return Number(whole) * 100 + Number(cents.padEnd(2, "0"));
@@ -64,7 +67,7 @@ export const formatMinutes = (minutes: number): string =>
 
 /** 150 -> "2,50 h" */
 export const formatHours = (minutes: number): string =>
-  `${(minutes / 60).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} h`;
+  `${(minutes / 60).toLocaleString(locale(), { minimumFractionDigits: 2, maximumFractionDigits: 2 })} h`;
 
 /** "2:30", "2h30", "2,5", "2.5", "2" (hours) or "45m" (minutes) -> minutes. null if it is not a duration. */
 export function toMinutes(text: string): number | null {
@@ -84,10 +87,11 @@ export function toMinutes(text: string): number | null {
 export const nowLocal = (): string => new Date(Date.now() - 3 * 3600_000).toISOString().slice(0, 16);
 export const today = (): string => nowLocal().slice(0, 10);
 
-/** "2026-11-20" -> "20/11/2026"; "2026-11-20T14:30" -> "20/11/2026 14:30". */
+/** "2026-11-20" -> "20/11/2026" (English: "11/20/2026"); with the time, "20/11/2026 14:30". */
 export function formatDate(iso: string | null | undefined): string {
   if (!iso) return "";
-  const d = `${iso.slice(8, 10)}/${iso.slice(5, 7)}/${iso.slice(0, 4)}`;
+  const [y, m, day] = [iso.slice(0, 4), iso.slice(5, 7), iso.slice(8, 10)];
+  const d = lang() === "en" ? `${m}/${day}/${y}` : `${day}/${m}/${y}`;
   return iso.length > 10 ? `${d} ${iso.slice(11, 16)}` : d;
 }
 
@@ -120,10 +124,10 @@ export function openDialog(title: string, ...children: Child[]): HTMLDialogEleme
 
 /** A form inside a dialog: `fields`, then Salvar / Cancelar. `save` returns true to close the dialog. */
 export function formDialog(title: string, fields: Child[], save: () => Promise<boolean | void>,
-  submitText = "Salvar"): HTMLDialogElement {
+  submitText = t("Salvar")): HTMLDialogElement {
   const submit = h("button", { className: "primary", type: "submit" }, submitText);
   const form = h("form", {}, fields, h("div", { className: "actions" }, submit,
-    h("button", { className: "secondary", type: "button", onclick: () => dialog.close() }, "Cancelar")));
+    h("button", { className: "secondary", type: "button", onclick: () => dialog.close() }, t("Cancelar"))));
   const dialog = openDialog(title, form);
   form.addEventListener("submit", (e) => {
     e.preventDefault();
@@ -143,12 +147,12 @@ export function field(label: string, input: HTMLElement, hint?: string): Child[]
   return [h("label", { htmlFor: input.id }, label), input, hint ? h("p", { className: "muted hint" }, hint) : null];
 }
 
-export async function confirmAction(text: string, confirmText = "Excluir"): Promise<boolean> {
+export async function confirmAction(text: string, confirmText = t("Excluir")): Promise<boolean> {
   return new Promise((resolve) => {
     let answer = false;
     const ok = h("button", { className: "danger", onclick: () => { answer = true; dialog.close(); } }, confirmText);
-    const dialog = openDialog("Confirmar", h("p", {}, text), h("div", { className: "actions" }, ok,
-      h("button", { className: "secondary", onclick: () => dialog.close() }, "Cancelar")));
+    const dialog = openDialog(t("Confirmar"), h("p", {}, text), h("div", { className: "actions" }, ok,
+      h("button", { className: "secondary", onclick: () => dialog.close() }, t("Cancelar"))));
     dialog.addEventListener("close", () => resolve(answer));
     ok.focus();
   });
@@ -162,7 +166,7 @@ export function actionsMenu(label: string, items: (MenuItem | false | null | und
     items.filter((i): i is MenuItem => Boolean(i)).map(({ text, onclick, danger }) => h("button", {
       role: "menuitem", className: danger ? "danger-item" : null,
       onclick: (e: Event) => { close(); onclick(e); } }, text)));
-  const button = h("button", { className: "kebab", title: "Ações", "aria-label": `Ações: ${label}`,
+  const button = h("button", { className: "kebab", title: t("Ações"), "aria-label": t("Ações: {name}", { name: label }),
     "aria-haspopup": "menu", "aria-expanded": "false",
     onclick: (e: Event) => { e.stopPropagation(); if (list.hidden) open(); else close(); } }, "⋮");
   const outside = (e: Event) => { if (!list.contains(e.target as Node) && e.target !== button) close(); };
@@ -196,6 +200,27 @@ const SVG = "http://www.w3.org/2000/svg";
 const EYE = "M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z M12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6z";
 const EYE_OFF = "M3 3l18 18 M10.6 5.1A10.7 10.7 0 0 1 12 5c7 0 11 7 11 7a18 18 0 0 1-3.2 4.1 M6.6 6.6A18 18 0 0 0 1 12s4 7 11 7a10.6 10.6 0 0 0 5.4-1.6 M9.9 9.9a3 3 0 0 0 4.2 4.2";
 
+/** Stroke icons (24x24 paths), drawn in the text color. */
+export const ICONS = {
+  tasks: "M9 11l3 3 8-8 M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h9",
+  billing: "M4 6h16a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2z M12 10a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5z",
+  payments: "M4 19V9 M10 19V5 M16 19v-7 M22 19H2",
+  projects: "M3 21h18 M5 21V7l7-4 7 4v14 M9 21v-6h6v6",
+  logout: "M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4 M16 17l5-5-5-5 M21 12H9",
+  settings: "M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z",
+} as const;
+
+export function icon(name: keyof typeof ICONS): SVGSVGElement {
+  const svg = document.createElementNS(SVG, "svg");
+  svg.setAttribute("viewBox", "0 0 24 24");
+  svg.setAttribute("aria-hidden", "true");
+  svg.setAttribute("class", "icon-svg");
+  const path = document.createElementNS(SVG, "path");
+  path.setAttribute("d", ICONS[name]);
+  svg.append(path);
+  return svg;
+}
+
 /** A password input with an eye button that shows / hides what was typed. */
 export function revealable(input: HTMLInputElement): HTMLElement {
   const path = document.createElementNS(SVG, "path");
@@ -211,8 +236,8 @@ export function revealable(input: HTMLInputElement): HTMLElement {
   function update(): void {
     const shown = input.type === "text";
     path.setAttribute("d", shown ? EYE_OFF : EYE);
-    toggle.setAttribute("aria-label", shown ? "Ocultar senha" : "Mostrar senha");
-    toggle.title = shown ? "Ocultar senha" : "Mostrar senha";
+    toggle.setAttribute("aria-label", shown ? t("Ocultar senha") : t("Mostrar senha"));
+    toggle.title = shown ? t("Ocultar senha") : t("Mostrar senha");
     toggle.setAttribute("aria-pressed", String(shown));
   }
   update();

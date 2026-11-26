@@ -1,8 +1,8 @@
 """Opens the built frontend in a real Chromium, talking to the real API (in-memory database).
 Run:  python dev.py e2e   (builds the frontend, then runs this file)
 
-Two passes: `run()` goes through the login screen with a simulated Cognito (like the deployed app) and
-then registers a company, a project with its rule, tasks, time, approval and a payment; `run_without_login()`
+Two passes: `run()` creates an account (sign-up, the e-mailed code), logs out and in by e-mail with a
+simulated Cognito (like the deployed app) and then registers a company, a project with its rule, tasks, time, approval and a payment; `run_without_login()`
 checks the local server's default mode, which has no login and opens with the demo data, on a phone.
 
 The texts used in the selectors ("Entrar", "Salvar", ...) are the app's labels, which are in Portuguese."""
@@ -21,23 +21,60 @@ def url_of(server):
     return f"http://127.0.0.1:{server.server_address[1]}/"
 
 
-def cognito(route):
-    """First access requires a new password, like a user created by the administrator. The token is
-    "token-u<DDD + number>": the local server takes the login from it (local/server.py)."""
-    target = route.request.headers["x-amz-target"].split(".")[-1]
-    body = json.loads(route.request.post_data)
-    username = (body.get("AuthParameters") or body.get("ChallengeResponses") or {}).get("USERNAME")
-    if username is not None:
-        assert re.fullmatch(r"\+55\d{10,11}", username), username
-    if target == "InitiateAuth" and body["AuthParameters"].get("PASSWORD") == "wrong":
-        return route.fulfill(status=400, content_type="application/x-amz-json-1.1",
-                             body=json.dumps({"__type": "NotAuthorizedException"}))
-    if target == "InitiateAuth":
-        response = {"ChallengeName": "NEW_PASSWORD_REQUIRED", "Session": "session-1"}
-    else:
-        response = {"AuthenticationResult": {"IdToken": f"token-u{username[3:]}", "AccessToken": "access",
-                                             "ExpiresIn": 3600, "RefreshToken": "r"}}
-    route.fulfill(status=200, content_type="application/x-amz-json-1.1", body=json.dumps(response))
+class FakeCognito:
+    """Plays Cognito for the browser: sign-up sends the code "123456" (no e-mail), the account logs in only
+    after it is confirmed. The token is "token-<e-mail>": the local server takes the login from it."""
+    CODE = "123456"
+
+    def __init__(self):
+        self.users = {}                                   # e-mail -> {"password", "confirmed"}
+
+    def reply(self, route, status, body):
+        route.fulfill(status=status, content_type="application/x-amz-json-1.1", body=json.dumps(body))
+
+    def error(self, route, kind):
+        self.reply(route, 400, {"__type": kind})
+
+    def __call__(self, route):
+        target = route.request.headers["x-amz-target"].split(".")[-1]
+        body = json.loads(route.request.post_data)
+        if target == "SignUp":
+            email = body["Username"]
+            assert email == email.strip().lower(), email          # the site sends it normalized
+            if email in self.users:
+                return self.error(route, "UsernameExistsException")
+            attributes = {a["Name"]: a["Value"] for a in body.get("UserAttributes", [])}
+            self.users[email] = {"password": body["Password"], "confirmed": False, "attributes": attributes}
+            return self.reply(route, 200, {"UserConfirmed": False,
+                                           "CodeDeliveryDetails": {"Destination": email[0] + "***@" + email.split("@")[1]}})
+        if target == "ResendConfirmationCode":
+            return self.reply(route, 200, {})
+        if target == "ConfirmSignUp":
+            if body["ConfirmationCode"] != self.CODE:
+                return self.error(route, "CodeMismatchException")
+            self.users[body["Username"]]["confirmed"] = True
+            return self.reply(route, 200, {})
+        if target in ("GetUser", "UpdateUserAttributes", "ChangePassword"):
+            user = self.users[body["AccessToken"][len("access-"):]]
+            if target == "GetUser":
+                return self.reply(route, 200, {"UserAttributes": [{"Name": k, "Value": v}
+                                                                   for k, v in user["attributes"].items()]})
+            if target == "UpdateUserAttributes":
+                user["attributes"].update({a["Name"]: a["Value"] for a in body["UserAttributes"]})
+                return self.reply(route, 200, {})
+            if body["PreviousPassword"] != user["password"]:
+                return self.error(route, "NotAuthorizedException")
+            user["password"] = body["ProposedPassword"]
+            return self.reply(route, 200, {})
+        assert target == "InitiateAuth", target
+        email, password = body["AuthParameters"]["USERNAME"], body["AuthParameters"]["PASSWORD"]
+        user = self.users.get(email)
+        if not user or user["password"] != password:
+            return self.error(route, "NotAuthorizedException")
+        if not user["confirmed"]:
+            return self.error(route, "UserNotConfirmedException")
+        self.reply(route, 200, {"AuthenticationResult": {"IdToken": f"token-{email}", "AccessToken": f"access-{email}",
+                                                         "ExpiresIn": 3600, "RefreshToken": "r"}})
 
 
 def watch(page, errors):
@@ -52,26 +89,46 @@ def run():
     month = date.today().strftime("%Y-%m")
     with sync_playwright() as p:
         browser = p.chromium.launch()
-        page = browser.new_page()
+        page = browser.new_page(locale="pt-BR")             # the system's first language
+        cognito = FakeCognito()
         watch(page, errors)
         page.route("https://cognito-idp.sa-east-1.amazonaws.com/", cognito)
         page.goto(url_of(server))
 
-        # login: wrong password, then first access with a new password
-        page.fill("#l-phone", "11987654321")
+        # sign up: a weak password, then a good one; the e-mailed code, first wrong, then right
+        expect(page.locator("h2")).to_have_text("Entrar")
+        page.click("text=Criar conta")
+        page.fill("#s-name", "Ana Lima")
+        page.fill("#s-email", " Ana@Exemplo.com ")
+        page.fill("#s-password", "fraca")
+        page.fill("#s-repeat", "fraca")
+        page.click("button:text('Criar conta')")
+        expect(page.locator(".toast.error").last).to_contain_text("A senha precisa ter")
+        page.fill("#s-password", "Strong-Password-1")
+        page.fill("#s-repeat", "Strong-Password-1")
+        page.click("button:text('Criar conta')")
+        expect(page.locator("h2")).to_have_text("Confirme o seu e-mail")
+        expect(page.locator("form")).to_contain_text("ana@exemplo.com")
+        page.fill("#c-code", "000000")
+        page.click("button:text('Confirmar')")
+        expect(page.locator(".toast.error").last).to_contain_text("Código incorreto")
+        page.fill("#c-code", FakeCognito.CODE)
+        page.click("button:text('Confirmar')")
+        expect(page.locator(".empty-state")).to_contain_text("Nenhum projeto ainda")
+
+        # log out, then in by e-mail and password: a wrong password first
+        page.click("#side-account .logout")
+        page.fill("#l-email", "ana@exemplo.com")
         page.fill("#l-password", "wrong")
-        page.click("text=Entrar")
+        page.click("button:text('Entrar')")
         expect(page.locator(".toast.error").last).to_contain_text("incorretos")
         page.fill("#l-password", "Strong-Password-1")
-        page.click("text=Entrar")
-        expect(page.locator("text=Primeiro acesso")).to_be_visible()
-        page.fill("#l-password", "Another-Password-9")
-        page.click("text=Definir senha")
+        page.click("button:text('Entrar')")
         expect(page.locator(".empty-state")).to_contain_text("Nenhum projeto ainda")
-        errors.clear()                  # the browser logged Cognito's 400 for the wrong password, on purpose
+        errors.clear()                  # the browser logged Cognito's 400s (weak code, wrong password), on purpose
 
         # a company and its project: R$ 100/h, last hour R$ 150/h if approved, only approved are paid
-        page.click("nav >> text=Empresas e projetos")
+        page.click("nav >> text=Projetos")
         page.click("#new-company")
         page.fill("#c-name", "Etho")
         page.click("dialog >> text=Salvar")
@@ -138,6 +195,40 @@ def run():
         page.click("nav >> text=Pagamentos")
         expect(page.locator("#payments-table tbody tr")).to_have_count(1)
         expect(page.locator("#payments-totals")).to_contain_text("não pagas: R$ 112,50")
+
+        # Configurações: apart from the menu. Name, password, then the language (saved in the login too)
+        page.click("#side-account .settings-link")
+        expect(page.locator("h1")).to_have_text("Configurações")
+        expect(page.locator("nav [aria-current=page]")).to_have_count(0)
+        expect(page.locator("#set-email")).to_have_value("ana@exemplo.com")
+        expect(page.locator("#set-name")).to_have_value("Ana Lima")
+        page.fill("#set-name", "Ana Souza")
+        page.click("text=Salvar nome")
+        expect(page.locator(".toast").last).to_contain_text("Nome salvo")
+        page.fill("#set-current", "wrong-Password-1")
+        page.fill("#set-new", "Newer-Password-2")
+        page.fill("#set-repeat", "Newer-Password-2")
+        page.click("button:text('Alterar senha')")
+        expect(page.locator(".toast.error").last).to_contain_text("Senha atual incorreta")
+        page.fill("#set-current", "Strong-Password-1")
+        page.click("button:text('Alterar senha')")
+        expect(page.locator(".toast").last).to_contain_text("Senha alterada")
+        page.click("#settings-language >> text=English")
+        expect(page.locator("h1")).to_have_text("Settings")
+        expect(page.locator("nav")).to_contain_text("Tasks")
+        user = cognito.users["ana@exemplo.com"]
+        assert user["attributes"]["name"] == "Ana Souza" and user["attributes"]["locale"] == "en", user
+        assert user["password"] == "Newer-Password-2"
+
+        # in English: money, dates and the API's own messages too
+        page.click("nav >> text=Payments")
+        expect(page.locator("#payments-totals")).to_contain_text("not paid: R$112.50")
+        page.click("nav >> text=Projects")
+        page.click("#new-company")
+        page.fill("#c-name", "etho")
+        page.click("dialog >> text=Save")
+        expect(page.locator(".toast.error").last).to_have_text("A company with this name already exists")
+        errors.clear()                  # the browser logged the API's 400 and Cognito's, on purpose
         browser.close()
     server.shutdown()
     assert not errors, errors
@@ -150,17 +241,25 @@ def run_without_login():
     errors = []
     with sync_playwright() as p:
         browser = p.chromium.launch()
-        page = browser.new_page(viewport={"width": 390, "height": 800})               # a phone
+        page = browser.new_page(viewport={"width": 390, "height": 800}, locale="pt-BR")   # a phone
         watch(page, errors)
         page.goto(url_of(server))
         expect(page.locator("h1")).to_have_text("Tarefas")
         expect(page.locator("[data-task]")).to_have_count(3)                          # the open demo tasks
         width = page.evaluate("document.documentElement.scrollWidth")
         assert width <= 390, f"the page scrolls sideways on a phone ({width}px)"
-        page.click("#menu-toggle")
-        expect(page.locator("#local-mode")).to_be_visible()
-        page.click("nav >> text=Empresas e projetos")
+        expect(page.locator("#top-bar .local-mode")).to_be_visible()                 # no login here
+        expect(page.locator("nav")).to_be_visible()                                   # the bottom bar
+        page.click("nav >> text=Projetos")
         expect(page.locator("[data-company]")).to_have_count(2)
+        page.click("#top-bar .settings-link")                                      # Configurações, on a phone
+        expect(page.locator("#settings-local")).to_be_visible()                      # no name or password here
+        page.click("#settings-language >> text=English")
+        expect(page.locator("nav")).to_contain_text("Projects")
+        page.reload()                                                                 # the choice is kept
+        expect(page.locator("h1")).to_have_text("Tasks")
+        width = page.evaluate("document.documentElement.scrollWidth")
+        assert width <= 390, f"the page scrolls sideways on a phone ({width}px)"
         browser.close()
     server.shutdown()
     assert not errors, errors
