@@ -1,0 +1,133 @@
+# Shared deploy steps. deploy-dev.yml and deploy-prod.yml decide WHEN to deploy.
+name: Deploy (reusable)
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        description: "Terraform environment: dev or prod"
+        required: true
+        type: string
+      github_environment:
+        description: "Name of the GitHub Environment: dev or producao"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: Deploy (${{ inputs.environment }})
+    runs-on: ubuntu-24.04
+    # Secrets and variables come from the Environment, so each environment uses its own AWS account.
+    environment: ${{ inputs.github_environment }}
+    env:
+      AWS_REGION: ${{ vars.AWS_REGION }}
+      ENVIRONMENT: ${{ inputs.environment }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Check that the keys belong to the right account
+        env:
+          EXPECTED_ACCOUNT: ${{ vars.AWS_ACCOUNT_ID }}
+        run: |
+          ACCOUNT="$(aws sts get-caller-identity --query Account --output text)"
+          if [ "$ACCOUNT" != "$EXPECTED_ACCOUNT" ]; then
+            echo "::error::The keys belong to account $ACCOUNT, but the '$ENVIRONMENT' Environment expects $EXPECTED_ACCOUNT. Nothing was deployed."
+            exit 1
+          fi
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.10.5"
+          terraform_wrapper: false # otherwise `terraform output -raw` comes with extra text
+
+      - name: Ensure the Terraform state bucket (created the first time, only checked afterwards)
+        id: state
+        env:
+          BUCKET: task-pulse-state-${{ vars.AWS_ACCOUNT_ID }}
+        run: |
+          if ! aws s3api head-bucket --bucket "$BUCKET" 2>/dev/null; then
+            if [ "$AWS_REGION" = "us-east-1" ]; then
+              aws s3api create-bucket --bucket "$BUCKET"
+            else
+              aws s3api create-bucket --bucket "$BUCKET" --region "$AWS_REGION" \
+                --create-bucket-configuration LocationConstraint="$AWS_REGION"
+            fi
+          fi
+          aws s3api put-public-access-block --bucket "$BUCKET" --public-access-block-configuration \
+            BlockPublicAcls=true,IgnorePublicAcls=true,BlockPublicPolicy=true,RestrictPublicBuckets=true
+          aws s3api put-bucket-versioning --bucket "$BUCKET" --versioning-configuration Status=Enabled
+          aws s3api put-bucket-encryption --bucket "$BUCKET" --server-side-encryption-configuration \
+            '{"Rules":[{"ApplyServerSideEncryptionByDefault":{"SSEAlgorithm":"AES256"}}]}'
+          echo "bucket=$BUCKET" >> "$GITHUB_OUTPUT"
+
+      - name: Terraform init and plan
+        working-directory: infra
+        run: |
+          terraform init -input=false \
+            -backend-config="bucket=${{ steps.state.outputs.bucket }}" \
+            -backend-config="key=task-pulse/${ENVIRONMENT}.tfstate" \
+            -backend-config="region=${AWS_REGION}" \
+            -backend-config="use_lockfile=true"
+          terraform plan -input=false -out=tfplan \
+            -var="environment=${ENVIRONMENT}" \
+            -var="region=${AWS_REGION}"
+
+      # The data lives in two resources: the Cognito user pool (every login) and the DynamoDB table
+      # (everything else). A change that would delete or recreate either one stops the deploy here,
+      # before anything is applied: that must be decided by a person, never by a push.
+      - name: Refuse a plan that would delete the logins or the data
+        working-directory: infra
+        run: |
+          terraform show -json tfplan > plan.json
+          DANGER="$(jq -r '.resource_changes[]
+            | select(.type == "aws_cognito_user_pool" or .type == "aws_dynamodb_table")
+            | select(.change.actions | index("delete"))
+            | .address' plan.json)"
+          if [ -n "$DANGER" ]; then
+            echo "::error::This deploy would delete or recreate: $DANGER. Nothing was applied."
+            exit 1
+          fi
+          echo "Plan checked: no user pool or table is deleted." >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Terraform apply (exactly the plan that was checked)
+        working-directory: infra
+        run: terraform apply -input=false tfplan
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Build the site (TypeScript -> frontend/public/js)
+        working-directory: frontend
+        run: |
+          npm ci
+          npm run build
+
+      - name: Generate frontend/public/js/config.js with the AWS data
+        working-directory: infra
+        run: |
+          printf 'export const CONFIG = { region: "%s", clientId: "%s", apiUrl: "%s" };\n' \
+            "$AWS_REGION" \
+            "$(terraform output -raw cognito_client_id)" \
+            "$(terraform output -raw api_url)" > ../frontend/public/js/config.js
+          cat ../frontend/public/js/config.js
+
+      - name: Publish the site (only frontend/public: never src/ or node_modules/) and clear the cache
+        working-directory: infra
+        run: |
+          aws s3 sync ../frontend/public "s3://$(terraform output -raw site_bucket)" \
+            --delete --cache-control "no-cache"
+          aws cloudfront create-invalidation \
+            --distribution-id "$(terraform output -raw cloudfront_id)" --paths "/*" > /dev/null
+          echo "Environment **${ENVIRONMENT}**: $(terraform output -raw site_url)" >> "$GITHUB_STEP_SUMMARY"

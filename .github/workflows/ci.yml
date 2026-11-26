@@ -1,0 +1,61 @@
+name: CI
+
+on:
+  pull_request:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    name: Backend (tests)
+    runs-on: ubuntu-24.04 # pinned: Playwright has no Chromium for newer Ubuntu yet
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r requirements-dev.txt          # the same pinned versions as `python dev.py setup`
+      - run: python -m pytest -q local/tests
+
+  frontend:
+    name: Frontend (TypeScript and browser)
+    runs-on: ubuntu-24.04 # pinned: Playwright has no Chromium for newer Ubuntu yet
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Type check and build the TypeScript (frontend/src -> frontend/public/js)
+        working-directory: frontend
+        run: |
+          npm ci
+          npm run typecheck
+          npm run build
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: End-to-end test (Chromium + local in-memory API)
+        run: |
+          pip install -r requirements-dev.txt
+          playwright install --with-deps chromium
+          python local/e2e.py
+
+  infra:
+    name: Terraform (format and validation)
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: infra
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.10.5"
+      # Warning only: if the formatting is off, it does not block the deploy.
+      - run: terraform fmt -check -recursive -diff || echo "::warning::Terraform formatting is off (not blocking)."
+      - run: terraform init -backend=false -input=false
+      - run: terraform validate

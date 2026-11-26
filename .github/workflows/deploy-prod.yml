@@ -1,0 +1,54 @@
+# Production deploys by itself on every push to `main` (a merged PR), after the same tests as CI.
+# To require someone to approve each deploy, set "Required reviewers" on the `producao` Environment
+# (Settings → Environments): the deploy then waits for that approval. It can also be run by hand
+# (Actions → Deploy production → Run workflow, on main), typing "producao" to confirm.
+name: Deploy production
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Type "producao" to confirm'
+        required: true
+        type: string
+
+concurrency:
+  group: deploy-prod
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  guard:
+    name: Check branch (and the confirmation, when run by hand)
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Only main; by hand, only with confirmation
+        env:
+          REF: ${{ github.ref }}
+          EVENT: ${{ github.event_name }}
+          CONFIRM: ${{ inputs.confirm }} # through a variable: typed text is never pasted into the shell
+        run: |
+          if [ "$REF" != "refs/heads/main" ]; then
+            echo "::error::Production only deploys from the main branch (ran on $REF)."
+            exit 1
+          fi
+          if [ "$EVENT" = "workflow_dispatch" ] && [ "$CONFIRM" != "producao" ]; then
+            echo '::error::Wrong confirmation: type exactly "producao".'
+            exit 1
+          fi
+
+  tests:
+    needs: guard
+    uses: ./.github/workflows/ci.yml
+
+  deploy:
+    needs: tests
+    uses: ./.github/workflows/deploy-reusable.yml
+    with:
+      environment: prod
+      github_environment: producao
+    secrets: inherit

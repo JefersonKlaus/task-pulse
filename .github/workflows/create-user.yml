@@ -1,0 +1,102 @@
+# Creates a login in Cognito, no terminal needed: Actions → Create user → Run workflow.
+# The login is the phone (DDD + number); the name shows in Cognito. No e-mail and no
+# verification code: the workflow creates the login with a ready, permanent password (shown once, in
+# the run's summary) to be sent to the person with their phone. If the phone already has a login, only
+# its name is updated (or, with `reset_password`, its password is changed to a new one).
+name: Create user
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Environment in which to create the user"
+        required: true
+        type: choice
+        options: [dev, producao] # names of the GitHub Environments
+      name:
+        description: "User's name (e.g. Ana Lima)"
+        required: true
+        type: string
+      phone:
+        description: "Phone used to log in: DDD + number, digits only (e.g. 11987654321)"
+        required: true
+        type: string
+      reset_password:
+        description: "If the phone already has a login: also give it a new password"
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  create:
+    runs-on: ubuntu-24.04
+    environment: ${{ inputs.environment }}
+    env:
+      NAME: ${{ inputs.name }} # through variables: typed text is never pasted into the shell
+      PHONE: ${{ inputs.phone }}
+      RESET_PASSWORD: ${{ inputs.reset_password }}
+      ENVIRONMENT: ${{ inputs.environment }}
+    steps:
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Create the user (or update their name)
+        run: |
+          NAME="$(printf '%s' "$NAME" | tr -s '[:space:]' ' ' | sed 's/^ //; s/ $//')"
+          if [ -z "$NAME" ] || [ "${#NAME}" -gt 80 ]; then
+            echo "::error::Invalid name: type the user's name (up to 80 characters)."
+            exit 1
+          fi
+          if ! printf '%s' "$PHONE" | grep -Eq '^[1-9]{2}[0-9]{8,9}$'; then
+            echo "::error::Invalid phone: type DDD + number, digits only (10 or 11 digits)."
+            exit 1
+          fi
+          TF_ENVIRONMENT="dev"
+          [ "$ENVIRONMENT" = "producao" ] && TF_ENVIRONMENT="prod"
+          POOL="$(aws cognito-idp list-user-pools --max-results 60 \
+            --query "UserPools[?Name=='task-pulse-${TF_ENVIRONMENT}-login'].Id | [0]" --output text)"
+          if [ -z "$POOL" ] || [ "$POOL" = "None" ]; then
+            echo "::error::Could not find this environment's Cognito user pool. Deploy the environment first."
+            exit 1
+          fi
+          # Attributes as JSON (built by jq): a name with commas or quotes is passed as it is.
+          NAME_ATTRIBUTE="$(jq -cn --arg v "$NAME" '[{Name: "name", Value: $v}]')"
+          # A password that meets the pool's policy (10+ characters, upper, lower, number).
+          # Never printed to the log (only to the summary): masking it would hide it in the summary too.
+          new_password() {
+            PASSWORD="Ab-$(openssl rand -hex 8)"
+          }
+          if aws cognito-idp admin-get-user --user-pool-id "$POOL" --username "+55$PHONE" > /dev/null 2>&1; then
+            aws cognito-idp admin-update-user-attributes --user-pool-id "$POOL" --username "+55$PHONE" \
+              --user-attributes "$NAME_ATTRIBUTE"
+            echo "User $PHONE already existed in **$ENVIRONMENT**: their name was updated ." >> "$GITHUB_STEP_SUMMARY"
+            if [ "$RESET_PASSWORD" = "true" ]; then
+              new_password
+              aws cognito-idp admin-set-user-password --user-pool-id "$POOL" --username "+55$PHONE" \
+              --password "$PASSWORD" --permanent
+              echo "New password for $PHONE: \`$PASSWORD\`" >> "$GITHUB_STEP_SUMMARY"
+            fi
+            exit 0
+          fi
+          # The username is the phone in international format (+55...). Created without any message (no
+          # e-mail, no code), then given a permanent password: the person logs in right away.
+          new_password
+          ATTRIBUTES="$(jq -cn --arg name "$NAME" --arg phone "+55$PHONE" '[
+            {Name: "name", Value: $name},
+            {Name: "phone_number", Value: $phone}, {Name: "phone_number_verified", Value: "true"}]')"
+          aws cognito-idp admin-create-user --user-pool-id "$POOL" --username "+55$PHONE" \
+              --user-attributes "$ATTRIBUTES" --message-action SUPPRESS > /dev/null
+          aws cognito-idp admin-set-user-password --user-pool-id "$POOL" --username "+55$PHONE" \
+              --password "$PASSWORD" --permanent
+          {
+            echo "User $PHONE created in **$ENVIRONMENT**. Send them the login and the password (it is not shown again):"
+            echo ""
+            echo "- Login (phone): \`$PHONE\`"
+            echo "- Password: \`$PASSWORD\`"
+          } >> "$GITHUB_STEP_SUMMARY"

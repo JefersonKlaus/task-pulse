@@ -1,0 +1,25 @@
+# Every push to the `dev` branch deploys automatically to the development AWS account.
+name: Deploy dev
+
+on:
+  push:
+    branches: [dev]
+
+concurrency:
+  group: deploy-dev
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  tests:
+    uses: ./.github/workflows/ci.yml
+
+  deploy:
+    needs: tests
+    uses: ./.github/workflows/deploy-reusable.yml
+    with:
+      environment: dev
+      github_environment: dev
+    secrets: inherit
