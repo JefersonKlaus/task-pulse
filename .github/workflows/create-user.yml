@@ -1,8 +1,9 @@
 # Creates a login in Cognito, no terminal needed: Actions → Create user → Run workflow.
-# The login is the phone (DDD + number); the name shows in Cognito. No e-mail and no
-# verification code: the workflow creates the login with a ready, permanent password (shown once, in
-# the run's summary) to be sent to the person with their phone. If the phone already has a login, only
-# its name is updated (or, with `reset_password`, its password is changed to a new one).
+# Anyone can also sign up on the site (Criar conta); this is for creating a login by hand. The login is
+# the e-mail; the name shows in Cognito. No verification code: the workflow creates the login with the
+# e-mail already confirmed and a ready, permanent password (shown once, in the run's summary) to be sent
+# to the person. If the e-mail already has a login, only its name is updated (or, with
+# `reset_password`, its password is changed to a new one).
 name: Create user
 
 on:
@@ -17,12 +18,12 @@ on:
         description: "User's name (e.g. Ana Lima)"
         required: true
         type: string
-      phone:
-        description: "Phone used to log in: DDD + number, digits only (e.g. 11987654321)"
+      email:
+        description: "E-mail used to log in (e.g. ana@example.com)"
         required: true
         type: string
       reset_password:
-        description: "If the phone already has a login: also give it a new password"
+        description: "If the e-mail already has a login: also give it a new password"
         required: false
         type: boolean
         default: false
@@ -36,11 +37,11 @@ jobs:
     environment: ${{ inputs.environment }}
     env:
       NAME: ${{ inputs.name }} # through variables: typed text is never pasted into the shell
-      PHONE: ${{ inputs.phone }}
+      EMAIL: ${{ inputs.email }}
       RESET_PASSWORD: ${{ inputs.reset_password }}
       ENVIRONMENT: ${{ inputs.environment }}
     steps:
-      - uses: aws-actions/configure-aws-credentials@v4
+      - uses: aws-actions/configure-aws-credentials@v6
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
@@ -53,8 +54,10 @@ jobs:
             echo "::error::Invalid name: type the user's name (up to 80 characters)."
             exit 1
           fi
-          if ! printf '%s' "$PHONE" | grep -Eq '^[1-9]{2}[0-9]{8,9}$'; then
-            echo "::error::Invalid phone: type DDD + number, digits only (10 or 11 digits)."
+          # The login is the e-mail in lower case (the pool ignores case anyway).
+          EMAIL="$(printf '%s' "$EMAIL" | tr -d '[:space:]' | tr '[:upper:]' '[:lower:]')"
+          if ! printf '%s' "$EMAIL" | grep -Eq '^[^@]+@[^@]+[.][^@]+$'; then
+            echo "::error::Invalid e-mail."
             exit 1
           fi
           TF_ENVIRONMENT="dev"
@@ -72,31 +75,31 @@ jobs:
           new_password() {
             PASSWORD="Ab-$(openssl rand -hex 8)"
           }
-          if aws cognito-idp admin-get-user --user-pool-id "$POOL" --username "+55$PHONE" > /dev/null 2>&1; then
-            aws cognito-idp admin-update-user-attributes --user-pool-id "$POOL" --username "+55$PHONE" \
+          if aws cognito-idp admin-get-user --user-pool-id "$POOL" --username "$EMAIL" > /dev/null 2>&1; then
+            aws cognito-idp admin-update-user-attributes --user-pool-id "$POOL" --username "$EMAIL" \
               --user-attributes "$NAME_ATTRIBUTE"
-            echo "User $PHONE already existed in **$ENVIRONMENT**: their name was updated ." >> "$GITHUB_STEP_SUMMARY"
+            echo "User $EMAIL already existed in **$ENVIRONMENT**: their name was updated." >> "$GITHUB_STEP_SUMMARY"
             if [ "$RESET_PASSWORD" = "true" ]; then
               new_password
-              aws cognito-idp admin-set-user-password --user-pool-id "$POOL" --username "+55$PHONE" \
-              --password "$PASSWORD" --permanent
-              echo "New password for $PHONE: \`$PASSWORD\`" >> "$GITHUB_STEP_SUMMARY"
+              aws cognito-idp admin-set-user-password --user-pool-id "$POOL" --username "$EMAIL" \
+                --password "$PASSWORD" --permanent
+              echo "New password for $EMAIL: \`$PASSWORD\`" >> "$GITHUB_STEP_SUMMARY"
             fi
             exit 0
           fi
-          # The username is the phone in international format (+55...). Created without any message (no
-          # e-mail, no code), then given a permanent password: the person logs in right away.
+          # Created without any message (no e-mail, no code) and with the e-mail already verified, then
+          # given a permanent password: the person logs in right away.
           new_password
-          ATTRIBUTES="$(jq -cn --arg name "$NAME" --arg phone "+55$PHONE" '[
+          ATTRIBUTES="$(jq -cn --arg name "$NAME" --arg email "$EMAIL" '[
             {Name: "name", Value: $name},
-            {Name: "phone_number", Value: $phone}, {Name: "phone_number_verified", Value: "true"}]')"
-          aws cognito-idp admin-create-user --user-pool-id "$POOL" --username "+55$PHONE" \
-              --user-attributes "$ATTRIBUTES" --message-action SUPPRESS > /dev/null
-          aws cognito-idp admin-set-user-password --user-pool-id "$POOL" --username "+55$PHONE" \
-              --password "$PASSWORD" --permanent
+            {Name: "email", Value: $email}, {Name: "email_verified", Value: "true"}]')"
+          aws cognito-idp admin-create-user --user-pool-id "$POOL" --username "$EMAIL" \
+            --user-attributes "$ATTRIBUTES" --message-action SUPPRESS > /dev/null
+          aws cognito-idp admin-set-user-password --user-pool-id "$POOL" --username "$EMAIL" \
+            --password "$PASSWORD" --permanent
           {
-            echo "User $PHONE created in **$ENVIRONMENT**. Send them the login and the password (it is not shown again):"
+            echo "User $EMAIL created in **$ENVIRONMENT**. Send them the password (it is not shown again):"
             echo ""
-            echo "- Login (phone): \`$PHONE\`"
+            echo "- Login (e-mail): \`$EMAIL\`"
             echo "- Password: \`$PASSWORD\`"
           } >> "$GITHUB_STEP_SUMMARY"
