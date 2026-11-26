@@ -181,7 +181,10 @@ feature branch (from dev) ──PR──► dev ──PR──► main ──►
   ([branch-flow.yml](.github/workflows/branch-flow.yml)), with CI green. A GitHub ruleset on `main`
   enforces it (Settings → Rules → Rulesets → *main*): no direct push, no force push, no deletion,
   pull request required, and the checks *Only dev into main*, *Backend (tests)*,
-  *Frontend (TypeScript and browser)* and *Terraform (format and validation)* must pass.
+  *Frontend (TypeScript and browser)* and *Terraform (format and validation)* must pass. To create it:
+  Settings → Rules → Rulesets → *New ruleset* → *Import a ruleset*, with
+  [`docs/main-ruleset.json`](docs/main-ruleset.json). Merges into main are merge commits, so `dev`
+  and `main` keep the same history.
 
 ```
 merge into main ──► tests (CI) ──► terraform plan ──► check the plan ──► terraform apply ──► build + publish the site
