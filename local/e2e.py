@@ -43,7 +43,8 @@ class FakeCognito:
             assert email == email.strip().lower(), email          # the site sends it normalized
             if email in self.users:
                 return self.error(route, "UsernameExistsException")
-            self.users[email] = {"password": body["Password"], "confirmed": False}
+            attributes = {a["Name"]: a["Value"] for a in body.get("UserAttributes", [])}
+            self.users[email] = {"password": body["Password"], "confirmed": False, "attributes": attributes}
             return self.reply(route, 200, {"UserConfirmed": False,
                                            "CodeDeliveryDetails": {"Destination": email[0] + "***@" + email.split("@")[1]}})
         if target == "ResendConfirmationCode":
@@ -53,6 +54,18 @@ class FakeCognito:
                 return self.error(route, "CodeMismatchException")
             self.users[body["Username"]]["confirmed"] = True
             return self.reply(route, 200, {})
+        if target in ("GetUser", "UpdateUserAttributes", "ChangePassword"):
+            user = self.users[body["AccessToken"][len("access-"):]]
+            if target == "GetUser":
+                return self.reply(route, 200, {"UserAttributes": [{"Name": k, "Value": v}
+                                                                   for k, v in user["attributes"].items()]})
+            if target == "UpdateUserAttributes":
+                user["attributes"].update({a["Name"]: a["Value"] for a in body["UserAttributes"]})
+                return self.reply(route, 200, {})
+            if body["PreviousPassword"] != user["password"]:
+                return self.error(route, "NotAuthorizedException")
+            user["password"] = body["ProposedPassword"]
+            return self.reply(route, 200, {})
         assert target == "InitiateAuth", target
         email, password = body["AuthParameters"]["USERNAME"], body["AuthParameters"]["PASSWORD"]
         user = self.users.get(email)
@@ -60,7 +73,7 @@ class FakeCognito:
             return self.error(route, "NotAuthorizedException")
         if not user["confirmed"]:
             return self.error(route, "UserNotConfirmedException")
-        self.reply(route, 200, {"AuthenticationResult": {"IdToken": f"token-{email}", "AccessToken": "access",
+        self.reply(route, 200, {"AuthenticationResult": {"IdToken": f"token-{email}", "AccessToken": f"access-{email}",
                                                          "ExpiresIn": 3600, "RefreshToken": "r"}})
 
 
@@ -76,9 +89,10 @@ def run():
     month = date.today().strftime("%Y-%m")
     with sync_playwright() as p:
         browser = p.chromium.launch()
-        page = browser.new_page()
+        page = browser.new_page(locale="pt-BR")             # the system's first language
+        cognito = FakeCognito()
         watch(page, errors)
-        page.route("https://cognito-idp.sa-east-1.amazonaws.com/", FakeCognito())
+        page.route("https://cognito-idp.sa-east-1.amazonaws.com/", cognito)
         page.goto(url_of(server))
 
         # sign up: a weak password, then a good one; the e-mailed code, first wrong, then right
@@ -181,6 +195,40 @@ def run():
         page.click("nav >> text=Pagamentos")
         expect(page.locator("#payments-table tbody tr")).to_have_count(1)
         expect(page.locator("#payments-totals")).to_contain_text("não pagas: R$ 112,50")
+
+        # Configurações: apart from the menu. Name, password, then the language (saved in the login too)
+        page.click("#side-account .settings-link")
+        expect(page.locator("h1")).to_have_text("Configurações")
+        expect(page.locator("nav [aria-current=page]")).to_have_count(0)
+        expect(page.locator("#set-email")).to_have_value("ana@exemplo.com")
+        expect(page.locator("#set-name")).to_have_value("Ana Lima")
+        page.fill("#set-name", "Ana Souza")
+        page.click("text=Salvar nome")
+        expect(page.locator(".toast").last).to_contain_text("Nome salvo")
+        page.fill("#set-current", "wrong-Password-1")
+        page.fill("#set-new", "Newer-Password-2")
+        page.fill("#set-repeat", "Newer-Password-2")
+        page.click("button:text('Alterar senha')")
+        expect(page.locator(".toast.error").last).to_contain_text("Senha atual incorreta")
+        page.fill("#set-current", "Strong-Password-1")
+        page.click("button:text('Alterar senha')")
+        expect(page.locator(".toast").last).to_contain_text("Senha alterada")
+        page.click("#settings-language >> text=English")
+        expect(page.locator("h1")).to_have_text("Settings")
+        expect(page.locator("nav")).to_contain_text("Tasks")
+        user = cognito.users["ana@exemplo.com"]
+        assert user["attributes"]["name"] == "Ana Souza" and user["attributes"]["locale"] == "en", user
+        assert user["password"] == "Newer-Password-2"
+
+        # in English: money, dates and the API's own messages too
+        page.click("nav >> text=Payments")
+        expect(page.locator("#payments-totals")).to_contain_text("not paid: R$112.50")
+        page.click("nav >> text=Projects")
+        page.click("#new-company")
+        page.fill("#c-name", "etho")
+        page.click("dialog >> text=Save")
+        expect(page.locator(".toast.error").last).to_have_text("A company with this name already exists")
+        errors.clear()                  # the browser logged the API's 400 and Cognito's, on purpose
         browser.close()
     server.shutdown()
     assert not errors, errors
@@ -193,7 +241,7 @@ def run_without_login():
     errors = []
     with sync_playwright() as p:
         browser = p.chromium.launch()
-        page = browser.new_page(viewport={"width": 390, "height": 800})               # a phone
+        page = browser.new_page(viewport={"width": 390, "height": 800}, locale="pt-BR")   # a phone
         watch(page, errors)
         page.goto(url_of(server))
         expect(page.locator("h1")).to_have_text("Tarefas")
@@ -204,6 +252,14 @@ def run_without_login():
         expect(page.locator("nav")).to_be_visible()                                   # the bottom bar
         page.click("nav >> text=Projetos")
         expect(page.locator("[data-company]")).to_have_count(2)
+        page.click("#top-bar .settings-link")                                      # Configurações, on a phone
+        expect(page.locator("#settings-local")).to_be_visible()                      # no name or password here
+        page.click("#settings-language >> text=English")
+        expect(page.locator("nav")).to_contain_text("Projects")
+        page.reload()                                                                 # the choice is kept
+        expect(page.locator("h1")).to_have_text("Tasks")
+        width = page.evaluate("document.documentElement.scrollWidth")
+        assert width <= 390, f"the page scrolls sideways on a phone ({width}px)"
         browser.close()
     server.shutdown()
     assert not errors, errors

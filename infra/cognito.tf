@@ -54,8 +54,8 @@ resource "aws_cognito_user_pool_client" "site" {
   explicit_auth_flows = ["ALLOW_USER_PASSWORD_AUTH", "ALLOW_REFRESH_TOKEN_AUTH"]
 
   prevent_user_existence_errors = "ENABLED"
-  read_attributes               = ["email", "email_verified", "name"]
-  write_attributes              = ["email", "name"]
+  read_attributes               = ["email", "email_verified", "name", "locale"]
+  write_attributes              = ["email", "name", "locale"] # locale: the language chosen in Configurações
   enable_token_revocation       = true
 
   access_token_validity  = 60
