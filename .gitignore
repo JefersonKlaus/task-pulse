@@ -159,6 +159,9 @@ ENV/
 env.bak/
 venv.bak/
 
+# Conda environments
+conda-meta/
+
 # Spyder project settings
 .spyderproject
 .spyproject
@@ -219,5 +222,20 @@ __marimo__/
 # Streamlit
 .streamlit/secrets.toml
 
-# Local test database
-test.sqlite3
+# Terraform: state and local files never go to GitHub
+.terraform/
+.terraform.lock.hcl
+*.tfstate
+*.tfstate.*
+infra/build/
+terraform.tfvars
+*.auto.tfvars
+
+# The frontend: dependencies and the compiled site (built by `python dev.py build` and by the deploy)
+frontend/node_modules/
+frontend/public/js/
+infra/build/
+infra/.terraform/
+infra/*.tfstate*
+infra/tfplan
+infra/plan.json

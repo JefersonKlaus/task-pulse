@@ -1,478 +1,204 @@
 # Task Pulse
 
-A Django app to plan and log work on software projects. Each project is a git
-repository with tasks (goals, how to validate them, dates, time spent and
-status). Tasks can be imported from a CSV file. The billing page
-(Faturamento) calculates the hours and the earnings of a period in US
-dollars and Brazilian reais, and registers payments; the statistics page
-(Estatísticas) charts hours, tasks and money over time. Projects belong to
-companies (Alignerr, Etho, …), and every report can be filtered by company.
+Tracks the work done for companies and what it is worth, serverless on AWS. Each **company** has
+**projects**; each project has **pricing rules** (by the hour, with an optional flat last hour, or a
+fixed amount per task; whether only approved tasks are paid; a bonus by approved tasks in the period),
+each valid from a moment until another one starts. Each project has **tasks** (external id, name,
+repository, description, start, time worked, finish). The **billing** page takes a company, a project
+and a period, lists every task concluded in it with its value, lets you untick the ones that will
+**not** be paid and register what was received; the app then shows what was paid, what wasn't, what
+should have been received and what was received.
 
-The interface is in Brazilian Portuguese or in English: see
-[Languages](#languages).
+The app's screens are in Brazilian Portuguese; code and docs are in English.
 
-- [Quick start](#quick-start)
-- [Using the app](#using-the-app)
-- [Languages](#languages)
-- [Running the tests](#running-the-tests)
-- [Project structure](#project-structure)
-- [Configuration](#configuration)
-- [Upgrading an existing database](#upgrading-an-existing-database)
-- [Known limitations](#known-limitations)
+## Run it locally
 
-## Quick start
-
-You need Python 3.10 or newer (Django 4.2 also runs on Python 3.8 and 3.9).
+Needs Python 3.12+ and Node 22.
 
 ```bash
-python -m venv .venv
-source .venv/bin/activate            # Windows: .venv\Scripts\activate
-pip install -r requirements-dev.txt  # the app + test tools
-
-python manage.py migrate
-python manage.py createsuperuser     # optional, for /admin/
-python manage.py runserver
+python dev.py setup             # once: creates .venv/, installs TypeScript and downloads Chromium
+python dev.py serve             # builds the frontend, then http://127.0.0.1:8765
+python dev.py serve --empty     # start with nothing registered
 ```
 
-Open <http://127.0.0.1:8000/>. The sidebar links to every page. On a phone
-it is hidden: the ☰ button at the top opens it.
+No AWS, no login, no configuration. It opens with demo data ([local/seed.py](local/seed.py)): two
+companies, three projects (hourly with a flat last hour and a bonus, hourly whose rate changed last
+week, fixed per task) and their tasks, always dated around today. Data lives in memory and is gone
+when you stop the server.
 
-`requirements.txt` has only what the app needs to run (Django), and
-`requirements-dev.txt` adds the test tools.
-
-## Using the app
-
-| Page               | URL                      |
-|--------------------|--------------------------|
-| Statistics         | `/estatisticas/`         |
-| Billing            | `/faturamento/`          |
-| Payments           | `/pagamentos/`           |
-| Export payments    | `/pagamentos/exportar/`  |
-| Projects           | `/` (`/?empresa=<id>`)   |
-| Companies          | `/empresas/`             |
-| New company        | `/empresas/nova/`        |
-| Edit company       | `/empresas/<id>/editar/` |
-| New project        | `/projetos/novo/`        |
-| Project and tasks  | `/projetos/<id>/`        |
-| Edit project       | `/projetos/<id>/editar/` |
-| Edit task          | `/tarefas/<id>/editar/`  |
-| Import tasks       | `/importar/`             |
-| Admin              | `/admin/`                |
-
-### Companies
-
-The companies you work for (Alignerr, Etho, CompanyABC, …), on **Empresas**
-(*Companies*, in the sidebar).
-
-- Add a company with its name; names are unique, whatever the case
-  (`Etho` = `etho`). Rename it with **Editar**. A company opens its projects.
-- Each project belongs to one company, chosen on the project's form
-  (**Empresa**, required): the company pays for the project's tasks. Projects
-  created before companies existed show **Sem empresa** (*no company*) until
-  you edit them, which asks for one. Their tasks can't be paid until then.
-- Every report has an **Empresa** filter (shown once a company exists):
-  Faturamento, Pagamentos (and its CSV export), Estatísticas and the project
-  list. "Todas as empresas" (*all companies*) shows everything.
-- A payment's company is the company of **all** its tasks' projects. It is
-  not stored, so payments made before the projects had a company get it as
-  soon as they do. A payment with tasks of several companies (or of a company
-  and of none) is shown as **Várias empresas** (*several companies*) and is
-  only listed under "Todas as empresas". Payments registered now always have
-  one company (see [Payments](#payments)); only older ones can mix.
-- To delete a company, use the admin (`/admin/tasks/provider/`): its projects
-  stay, without a company.
-
-### Projects
-
-- Create a project from its git URL (https or SSH). If you leave the name
-  blank, the repository's name is used:
-  `https://github.com/acme/task-pulse.git` → `task-pulse`.
-- On the project page the URL is a link only when it starts with `http://` or
-  `https://`. SSH URLs are shown as text.
-
-### Tasks
-
-- **Nova tarefa** on the project page opens the form: name, goals and how to
-  validate the task. A new task starts as **DOING**, with today as its start
-  date (**Início**).
-- **Editar** changes any field, in this order: Início → Status → Término →
-  Tempo.
-- The finish date (**Término**) follows the status:
-
-  | When the status…           | Término                                    |
-  |----------------------------|--------------------------------------------|
-  | moves into REVIEW or DONE  | today, unless you type a date yourself     |
-  | goes from REVIEW to DONE   | stays as it was                            |
-  | is DOING                   | empty (the field is locked)                |
-  | is REJECTED                | whatever you type                          |
-
-  Both dates can be corrected later.
-
-### Time
-
-- Time is typed as `H:MM`. The **+ Tempo** box next to each task adds to its
-  total: `2:00`, then `1:00`, gives `3:00`.
-- On the edit page, rewrite **Tempo total** to correct the total, or fill in
-  **Adicionar tempo** to add to it.
-- Totals are shown in decimal hours: `3:30` → `3.50h`. Time is stored in whole
-  minutes, so repeated additions stay exact.
-
-### Importing tasks from CSV
-
-On **Importar tarefas** (*Import tasks*), upload the file. The file has one
-task per line; the `github` column is optional:
-
-```
-date;id;time;desc;status;github
-16/11/2026;TP-101;3,8;Tela de login;DONE;acme/portal
-17/11/2026;TP-102;1,5;API de tarefas;DOING;https://github.com/acme/api
-18/11/2026;TP-103;2:00;Revisão do layout;REVIEW;
-```
-
-| Column   | Meaning                                                              |
-|----------|----------------------------------------------------------------------|
-| `date`   | `dd/mm/aaaa` or `aaaa-mm-dd`. The start date, and also the finish date unless the status is DOING |
-| `id`     | The task's id in the other system. Required, and unique per project in the file |
-| `time`   | Hours: `3,8`, `3.8` or `3:48` (all 3h48). Blank means 0             |
-| `desc`   | The task name                                                        |
-| `status` | `DOING`, `REVIEW`, `DONE` or `REJECTED`, in any case. Blank means DOING |
-| `github` | Optional. The repository of the task's project: `owner/repo` or a URL (https or SSH). Blank means the project chosen in the form |
-
-- **Which project receives each line.** A line with `github` goes to that
-  repository's project (see below). Under **Projeto das linhas sem github**
-  (*project for the lines without github*), pick an existing project, or leave
-  **+ Criar novo projeto** selected and enter its git URL: it receives only the
-  lines **without** github, or every line if the file has no `github` column.
-  If every line has github, leave it blank.
-- **Empresa dos projetos novos** (*company of the new projects*): the company
-  of the projects the import creates (the new project of the form and the
-  `github` repositories that don't exist yet). It is required when the import
-  creates a project. Existing projects keep theirs.
-- The separator can be `;`, `,` or tab. The file can be UTF-8 or Excel's
-  Windows-1252, up to 2 MB. Header names may be in any order and case.
-- **All or nothing**: if any line is invalid, nothing is imported, and every
-  problem is listed with its line number.
-- A line whose `id` already exists in its project is **skipped**, so
-  importing the same file again never changes existing tasks.
-- **github**: a line with a repository goes to the project of that
-  repository, whatever was chosen in the form; if there is none, it is
-  created, named after the repository (`acme/portal` → `portal`, URL
-  `https://github.com/acme/portal`). One file can fill several projects.
-  - A repository matches an existing project however the URL is written:
-    `acme/portal`, `https://github.com/Acme/Portal.git` and
-    `git@github.com:acme/portal.git` are the same. If two projects have the
-    same repository, the oldest is used.
-  - Lines without github go to the project chosen in the form. If every
-    line has one, no project needs to be chosen (and none is created).
-  - The same `id` may appear once per repository (GitHub issue numbers
-    repeat across repositories).
-  - After the import, the project's page opens; when the file filled
-    several projects, the project list opens, with a line per project.
-- To try it, import `tests/fixtures/tarefas_exemplo.csv`: 35 tasks from
-  September to November 2026 with every status, 8 of them without time, both
-  date formats, all three time formats and a desc with `;`. 6 lines have
-  `github`, in each accepted way: 4 go to `acme/cotacao-api` (written as
-  `acme/cotacao-api` and as its https URL) and 2 to an SSH URL
-  (`git@github.com:acme/graficos.git`); the other 29 go to the project chosen
-  in the form. A test imports it, so it stays valid.
-
-### Statistics
-
-**Estatísticas** charts a period (the last 12 months on the first visit),
-by month or by week, of one company or of all (then with a chart of the
-hours **by company**):
-
-- Cards with the **hours** worked (and how many are not paid yet), the
-  **tasks** (and how many are Done), the money **received** in dollars and
-  the **average per hour paid** (received ÷ hours of the tasks paid).
-- Charts of the hours (paid and unpaid), the tasks by status, the dollars
-  received, and the hours by project (the 7 largest, then "Outros").
-- Tasks count in the month or week of their start date, as on the billing
-  page. Money counts in the month or week the payment was **registered**.
-- Hover a bar for its values. **Ver tabela** lists every number of the
-  charts (on a phone, where there is no hover, use the table).
-- At most 60 bars: a longer period must be grouped by month.
-- The charts are plain HTML and CSS, drawn on the server: no JavaScript
-  library and no internet access.
-
-### Billing
-
-On **Faturamento** (called *Painel* before; `/painel/` still leads here,
-filter included), choose a company (or all), a period, the statuses to include and, optionally, the
-rates in US dollars. Hover over a field to see its help.
-
-- A task belongs to the period of its start date. Only the checked statuses
-  are listed and calculated; if none is checked, all are.
-- **Incluir tarefas pagas** (under *Pagamento*) lists the tasks that were
-  already paid together with the others, tagged **Pago**. Unchecked, paid
-  tasks are left out of the list *and* of every total, and a note says they
-  are hidden. It is checked on the first visit. What is left to pay (see
-  [Payments](#payments)) is the same either way.
-- **Valor/h** pays every hour. **Valor flat/h** pays the *last* hour of each
-  task that was not rejected. Example with $90/h and a $100 flat:
-
-  | Task                   | Value                          |
-  |------------------------|--------------------------------|
-  | 5h, no flat            | 5 × 90 = **$450**              |
-  | 5h, with the flat      | 4 × 90 + 1 × 100 = **$460**    |
-  | 0:45, with the flat    | 0.75 × 100 = **$75**           |
-  | 5h, REJECTED           | 5 × 90 = **$450** (never flat) |
-
-- **Bônus** is added once to the period's total: $460 + $40 = **$500**.
-- The total in reais uses the current USD→BRL rate from
-  [AwesomeAPI](https://docs.awesomeapi.com.br/api-de-moedas). The rate is
-  cached for 10 minutes. This is the only part of the app that needs internet
-  access. If the API can't be reached, the page shows the dollar total and a
-  warning.
-- The filter is part of the URL, so a view can be bookmarked:
-  `/faturamento/?inicio=2026-11-01&fim=2026-11-30&status=DONE&valor_hora=90&pagas=on`.
-  Leave out `pagas=on` to hide the paid tasks (a browser sends nothing for
-  an unchecked box).
-
-### Payments
-
-Once the billing page has a **Valor/h**, a bar under the totals shows what is
-still to pay. Payments are made **by a company**: the **Pagar** button appears
-once a company is chosen in the filter (with "Todas as empresas" the bar only
-says so), and the payment covers that company's tasks. With "Todas as
-empresas", a warning counts the unpaid tasks of projects without a company,
-which can't be paid until their project gets one.
-
-1. **Pagar** opens a dialog with the period, the number of tasks, the hours
-   and the estimated value in dollars and in reais.
-2. Fill in what you actually received, **Pago (US$)** and **Pago (R$)**, and
-   press **Confirmar pagamento**.
-3. A payment is registered with the period, the estimated values, the paid
-   values and its tasks, and those tasks are marked **Pago** on the
-   billing page.
-
-- A payment covers the listed tasks that are **not paid yet**. Tasks paid
-  before stay on the list with the **Pago** tag, but are left out of the new
-  payment and its estimate, so a task is never paid twice. When every listed
-  task is paid, the button is not shown.
-- The estimate includes the bonus, and is calculated again when you confirm.
-  The estimate in reais is empty if the exchange rate was unavailable.
-- If the tasks to pay changed after the dialog was opened (a task was
-  added, or paid from another tab), nothing is saved and the billing page shows
-  a message. Check the values and press **Pagar** again.
-- **Pagamentos** (`/pagamentos/`, in the sidebar) lists every payment, newest
-  first: when it was registered, its period, tasks and hours, and the
-  estimated and paid values in dollars and reais, with the difference
-  (paid − estimated, in red when less was received). **Ver tarefas** shows a
-  payment's tasks.
-- It shows **10 payments per page**, with page links under the table
-  (`/pagamentos/?pagina=2`). The cards at the top total **every** payment;
-  the table's last row totals only the payments on the page ("Total desta
-  página"). A page number that doesn't exist shows the nearest page.
-- **Exportar CSV** (next to the title) downloads every payment, not only
-  the page's, as `pagamentos-<today>.csv`: one line per payment, newest
-  first, with the table's columns and the company (**Empresa**: its name,
-  "Várias empresas", or empty). It is written for Excel in Portuguese:
-  `;` separator, decimal comma and no currency symbol (`12345,60`), so the
-  values can be added up; dates as `dd/mm/aaaa`; UTF-8 with a BOM, for the
-  accents. An estimate in reais that doesn't exist is left empty. There is
-  no total line; the spreadsheet can sum the columns.
-
-  ```
-  Registrado em;Empresa;Início;Fim;Tarefas;Horas;Estimado (US$);Estimado (R$);Pago (US$);Pago (R$);Diferença (US$);Diferença (R$)
-  17/11/2026 14:30;Alignerr;01/11/2026;30/11/2026;2;7,75;460,00;2461,00;450,00;2400,00;-10,00;-61,00
-  ```
-- **Empresa** shows only a company's payments: the cards, the table, the
-  page links and the export all follow the filter. Each payment shows its
-  company.
-- To undo a payment, delete it in the admin (`/admin/tasks/payment/`): its
-  tasks become unpaid again.
-
-## Languages
-
-The switch at the top right of every page (**PT | EN**; in the top bar on a
-phone) changes the language of the whole interface: pages, messages, form
-errors and chart labels. The choice is kept in a cookie (`django_language`).
-Before one is chosen, the browser's language decides (English for an English
-browser), and Portuguese otherwise.
-
-What does not change with the language:
-
-- Amounts keep their currency's style (`US$ 1,234.50`, `R$ 1.234,50`) and
-  dates are `dd/mm/aaaa`.
-- The files: the import's columns and values (`date;id;…`, `Rejeitado`) and
-  the payments export (written for Excel in Portuguese).
-- The addresses (`/faturamento/`, `/pagamentos/`, …) and the data you type.
-
-### Translating
-
-Portuguese is the source language: texts are written in Portuguese in the
-code (`gettext`, `gettext_lazy`) and in the templates (`{% translate %}`,
-`{% blocktranslate %}`). The English texts are in
-`src/locale/en/LC_MESSAGES/django.po`; Django reads the compiled
-`django.mo` next to it, which is committed, so running the app needs nothing
-else.
-
-After adding or changing a text (this needs [GNU gettext](https://www.gnu.org/software/gettext/)):
+## Run the tests
 
 ```bash
-python manage.py makemessages -l en    # adds the new texts to django.po
-# translate the new entries (and the ones marked "fuzzy") in django.po
-python manage.py compilemessages       # updates django.mo
+python dev.py test    # backend tests + TypeScript type check (seconds)
+python dev.py e2e     # builds the frontend, then the browser test in a real Chromium
+python dev.py all     # both: what CI runs
 ```
 
-`tests/test_translations.py` fails if a text has no English translation, if
-a translation isn't used anymore, or if `gettext` is called with something
-other than literal text (`makemessages` only finds literal text). It can't
-see text typed in a template without `{% translate %}`: that text stays in
-Portuguese in English.
+| Tests | Where |
+|---|---|
+| Backend (pricing, rules by date, billing, API, DynamoDB format) | `local/tests/` (pytest) |
+| Whole app in a browser | `local/e2e.py` (Playwright) |
 
-## Running the tests
-
-The suite has about 310 tests and runs in a few seconds. It uses an
-in-memory database and never calls the network. You can run the same tests
-with pytest or with Django's test runner.
-
-### With pytest
-
-```bash
-pytest                                   # all tests
-pytest tests/domain                      # one folder
-pytest tests/domain/test_pricing.py      # one file
-pytest tests/domain/test_pricing.py::PricingTests                        # one class
-pytest tests/domain/test_pricing.py::PricingTests::test_value_of_a_task  # one test
-pytest -k billing                        # tests whose name contains "billing"
-pytest -x                                # stop at the first failure
-pytest --cov                             # all tests, with coverage
-```
-
-pytest finds the Django settings through `pytest.ini` (`pytest-django` plugin,
-`DJANGO_SETTINGS_MODULE = src.taskpulse.settings`).
-
-### With Django's test runner
-
-```bash
-python manage.py test                               # all tests
-python manage.py test tests.domain.test_pricing     # one module (dotted path)
-coverage run manage.py test && coverage report   # with coverage
-```
-
-### Coverage
-
-Coverage must stay at **100%** of lines and branches. The settings are in
-`.coveragerc`, which both commands above read:
-
-- Only `src/` is measured. Migrations (`src/migrations/`) are left out: they
-  are generated and run once per database.
-- The report lists only the files with lines or branches not run.
-- The run **fails** if coverage is below 100%, so add a test with any new
-  code. Check coverage on the full suite: a run of one folder or file
-  covers only part of the code and will always fail the check.
-
-### Writing tests
-
-- **Test behaviour, not configuration.** A test should fail when something
-  is broken, not whenever a line changes. Don't assert field types, labels,
-  placeholders or admin column lists; test what they do (for example, the
-  admin test renders the task list).
-- **Test each rule once, where it lives.** Rules are tested in
-  `tests/domain/` (often as a table: one test, many cases with `subTest`).
-  Models, services and views get a few tests that show they use the rule.
-- `tests/` mirrors `src/`. For example, `tests/domain/test_pricing.py` tests
-  `src/domain/pricing.py`. A few project-wide checks sit at the top of
-  `tests/`: architecture, migrations, templates (CSRF tokens), admin.
-- Build data with the helpers in `tests/factories.py` (`create_project()`,
-  `create_task()`, `build_task()`) and `tests/payloads.py` (form data). They
-  fill in valid defaults, so a test only sets the values it is about.
-- Use `SimpleTestCase` when the test doesn't need the database, and
-  `TestCase` when it does.
-- Never call the network. Pass a fake instead: the exchange-rate provider
-  and the HTTP opener are both injectable. View tests patch
-  `src.views.billing.default_provider`.
-- When a rule depends on today's date, pin it:
-  `mock.patch("src.models.timezone.localdate", return_value=date(2026, 11, 20))`.
-- Make sure a new test can fail: break the code for a moment and check that
-  the test goes red.
-
-## Project structure
+## Architecture
 
 ```
-task-pulse/
-├── manage.py
-├── pytest.ini              # pytest settings
-├── requirements.txt        # to run the app
-├── requirements-dev.txt    # + test tools
-├── src/                    # all the code (the Django app)
-│   ├── taskpulse/          # project settings, root URLs, WSGI
-│   ├── domain/             # business rules: pricing, Término rule, time, money,
-│   │                       #   periods, statistics, chart geometry
-│   ├── models.py           # Project, Task, Payment
-│   ├── integrations/       # exchange-rate API, CSV files (import, payments export)
-│   ├── services/           # use cases: billing, statistics, pay, export, import a file
-│   ├── forms/              # one module per feature
-│   ├── views/              # one module per feature
-│   ├── templates/          # pages (base.html has the sidebar and the language switch)
-│   ├── locale/en/          # the English translation (django.po, compiled to .mo)
-│   ├── templatetags/       # |decimal_hours, |usd, |brl …
-│   └── migrations/
-└── tests/                  # mirrors src/
+Browser ──► CloudFront ──► S3                 the site (HTML/CSS + JS compiled from TypeScript)
+   │
+   └──► API Gateway ──► one Lambda per action ──► DynamoDB
+        (checks the Cognito login)
 ```
 
-Each module has one responsibility, and the layers only depend downwards:
+```
+frontend/   the site: TypeScript in src/, compiled to public/js   public/ deployed to S3
+backend/    the Lambdas (Python)                                   deployed to AWS Lambda
+infra/      Terraform for everything in AWS
+local/      local server, in-memory database, tests                never deployed
+dev.py      the commands above
+```
+
+### Frontend
+
+TypeScript (`strict`), no framework and no bundler: `tsc` compiles each `src/*.ts` to an ES module in
+`public/js/` (`npm run build`, which `python dev.py build|serve|e2e` and the deploy run). The compiled
+files are not in git.
 
 ```
-domain  ←  models  ←  integrations  ←  services  ←  forms  ←  views
+frontend/
+  package.json, tsconfig.json   TypeScript, pinned; `npm run build | typecheck | watch`
+  public/index.html, style.css  the page (public/js/ is the build output)
+  src/app.ts            menu and login screen
+  src/api.ts            every call to the backend, typed
+  src/auth.ts           Cognito login (tokens)
+  src/config.ts         where the API is (public/js/config.js is written by the deploy)
+  src/types.ts          what the API answers
+  src/util.ts           DOM helpers, money (cents), time (minutes), dates, dialogs
+  src/screens/filters.ts   company / project / period (month or week) shared by every page
+  src/screens/tasks.ts     Tarefas: open tasks by period, + Tempo, Concluir, Aprovar / Rejeitar
+  src/screens/projects.ts  Empresas e projetos: companies, projects, pricing rules
+  src/screens/billing.ts   Faturamento: a project's period, untick what won't be paid, register what was received
+  src/screens/payments.ts  Pagamentos: every payment, should receive x received
 ```
 
-- **domain** holds the rules as plain Python, with no database or HTTP, so
-  they are simple to test.
-- **services** combine the layers below. Forms only validate input, and views
-  only turn requests into service calls and results into pages.
-- The billing page depends on an `ExchangeRateProvider` interface, not on
-  AwesomeAPI directly. Another source is a new class, and tests pass a fake
-  one.
-- `tests/test_architecture.py` fails if a module imports from a layer
-  above it.
+The frontend doesn't know whether the backend is AWS or local: it calls `CONFIG.apiUrl`. The deploy
+writes a `config.js` with the real API; the local server returns its own `config.js` pointing at itself,
+with `skipLogin: true`.
 
-## Configuration
+### Backend
 
-- The settings module is `src.taskpulse.settings`. In production, run
-  `src.taskpulse.wsgi:application` from the project root, for example with
-  `gunicorn src.taskpulse.wsgi:application`.
-- The included settings are for **development only**: `DEBUG = True`, a
-  hard-coded `SECRET_KEY`, and SQLite in `test.sqlite3` at the project root.
-- Exchange-rate settings, all optional: `EXCHANGE_RATE_API_URL`,
-  `EXCHANGE_RATE_TIMEOUT` (seconds, default 5) and
-  `EXCHANGE_RATE_CACHE_SECONDS` (default 600).
-- The Django app is the `src` package, with the label `tasks`. Database tables
-  are therefore named `tasks_project` and `tasks_task`, and URL names
-  `tasks:…`.
+One Lambda per business action, hexagonal: each Lambda has its use case and its HTTP adapter;
+everything else lives in a shared core, copied into every Lambda's zip.
 
-## Upgrading an existing database
+```
+backend/
+  core/pulse_core/
+    domain/models.py   Company, Project and its Rules, Task, Payment, and their validation
+    domain/pricing.py  what a task is worth by its rule; the period's bonus
+    ports.py           what use cases need: the Repository
+    application.py     rules shared by several use cases (clock, lookups, the billing of a period)
+    adapters/          DynamoDB, API Gateway input (login, ids, errors)
+  lambdas/<action>/    list_companies, create_company, update_company, delete_company,
+                       list_projects, get_project, create_project, update_project, delete_project,
+                       create_rule, update_rule, delete_rule,
+                       list_tasks, create_task, update_task, delete_task, add_task_time,
+                       get_billing, create_payment, list_payments, delete_payment
+    use_case.py        the action (only domain + ports, never AWS)
+    handler.py         API Gateway event -> use case -> HTTP response
+    lambda.json        {"route": "POST /projects", "database": "write"}
+```
 
-Back up `test.sqlite3`, then run `python manage.py migrate`. Migrations 0003
-and 0004 **cannot be undone**. What each migration changes:
+| Route | What it does |
+|---|---|
+| `GET /companies` · `POST /companies` · `PUT` · `DELETE /companies/{id}` | the companies (names unique ignoring case; one with projects can't be deleted) |
+| `GET /projects?company_id=` · `GET /projects/{id}` | the projects, with their company, rules and the rule in force now |
+| `POST /projects` · `PUT` · `DELETE /projects/{id}` | register (optionally with its first rule, `rule`), change, delete a project (with its tasks and payments) |
+| `POST /projects/{id}/rules` · `PUT` · `DELETE /projects/{id}/rules/{rule_id}` | the pricing rules |
+| `GET /tasks?company_id=&project_id=&from=&to=&state=` | `open` (default): DOING tasks started up to the end of the period; `finished`: concluded in it; `all` |
+| `POST /projects/{id}/tasks` · `PUT` · `DELETE /projects/{id}/tasks/{task_id}` | add, change, delete a task |
+| `POST /projects/{id}/tasks/{task_id}/time` | add time worked (`minutes`); with `finish`, conclude it now (or at `finished_at`) |
+| `GET /projects/{id}/billing?from=&to=` | the period's tasks with their value and situation, the bonus and the totals |
+| `POST /projects/{id}/payments` · `DELETE /projects/{id}/payments/{payment_id}` | register what was received for a period (`received_cents`, `not_paid_task_ids`); delete it |
+| `GET /payments?company_id=&project_id=` | every payment: should receive, received, difference, not paid |
 
-| Migration | Change |
-|-----------|--------|
-| 0003 | Removes the `Repository` model; its URL and description are copied to each project. Renames task `nickname` to `name`. **Deletes** task `language` and the old `external_id`. |
-| 0004 | Removes task `date`; it is first copied to the start date when that is empty. |
-| 0005 | Stores time in minutes instead of decimal hours (`2.50` → 150 min). |
-| 0006 | Adds the task's external id (unique per project). |
-| 0007 | Adds payments. Existing tasks start unpaid. |
-| 0008 | Adds companies. Existing projects start without one. |
+To add an action, create a folder with these three files. Terraform reads every `lambda.json` and
+creates the function, the route and the logs. Lambdas marked `"read"` can only read the table.
 
-## Known limitations
+Rules worth knowing:
 
-- The exchange-rate client was tested against AwesomeAPI's documented
-  response format (with fakes, and with a local test server), never against
-  the live API.
-- The script that locks Término while a task is DOING has no browser test.
-  The server enforces the same rule, and that part is tested.
-- The script that opens the **Pagar** dialog has no browser test either.
-  Without JavaScript the dialog can't be opened. Registering the payment is
-  tested on the server.
-- The phone layout (screens up to 720px wide, in `base.html`) was checked by
-  hand in Chromium at 320–414px; there is no browser test for it, nor for
-  the script that opens the sidebar from the ☰ button. On phones the
-  billing and payments tables show one card per row, and the CSS labels
-  their cells by column position: update it when a column changes.
-- The billing page's field help is a tooltip, and touch screens don't show
-  tooltips, so on a phone the help is only read by screen readers.
-- A task's time total above 9999:59 is shown correctly, but can't be saved
-  from the edit page, because the input allows at most 4 hour digits.
+- The user comes from the login token (`sub`), never from the request: each login sees only its data.
+- Money is always integer cents, never a float; each project has its currency (BRL, USD, EUR). Time
+  worked is whole minutes. A moment is `YYYY-MM-DDTHH:MM` in Brasília time.
+- **Statuses**: `DOING` (started, no finish), `DONE` (concluded, waiting for approval), `APPROVED`,
+  `REJECTED`. A task created already concluded needs its time and its finish. Concluding from the list
+  takes this moment as the finish (or the one typed). Back to DOING, the finish is cleared.
+- **Rules by date**: a rule is valid from `starts_at` until `ends_at` (excluded; empty = until another
+  starts) and rules of a project never overlap. A task is priced by **the rule in force when it was
+  finished**, so values can change in the middle of a day and a task finished before keeps the old
+  value. Creating a rule closes the one still open at the moment the new one starts. Once a task
+  (not yet billed) was concluded under a rule, its values can't change any more (only its end, and not
+  to before that task): to change a value, create a new rule from now on.
+- **Value of a task**: hourly, every minute at the hourly rate; with a flat rate, an **approved** task has
+  its last hour (all of it, if under an hour) at the flat rate instead: 5h at 90 with a 100 flat =
+  4 x 90 + 1 x 100 = 460. Fixed: the fixed amount per task, whatever the time. `REJECTED` is worth 0;
+  with "só paga tarefa aprovada", `DONE` is worth 0 too until it is approved. Rounded to the cent, half up.
+- **Bonus**: per billed period, by how many tasks were approved in it; the rule in force when the last of
+  them was finished says the tiers, and the highest tier reached is paid (once: a later payment in the
+  same period only takes what is still due).
+- **Payments**: registering one closes the open tasks concluded in the period: each is `paid` or
+  `not_paid` and its value is **frozen** in the payment, so a later rule change never changes what was
+  billed. A billed task only changes its texts (name, id, repository, description) and can't be
+  deleted; deleting the payment opens its tasks again. Should receive = paid tasks + bonus; the
+  difference is received − should receive.
+- An external id is unique per project (ignoring case); blank is allowed for any number of tasks.
+- DynamoDB, one table: `PK = OWNER#<user>`, `SK = COMPANY#<id>`, `PROJECT#<id>` (rules inside),
+  `TASK#<project id>#<id>`, `PAY#<project id>#<id>`. A payment marks its tasks with `BatchWriteItem`,
+  25 items per call.
+
+### Local
+
+`local/server.py` serves `frontend/public/` and plays API Gateway: `local/api_gateway.py` reads the same
+`lambda.json` files and calls the same Lambdas, with `local/memory_repository.py` instead of DynamoDB.
+It only listens on 127.0.0.1.
+
+## Deploy
+
+Everything goes through GitHub Actions, with no terminal: a push runs every test (Python, TypeScript
+and the browser test), then Terraform creates or updates all of AWS (Lambdas, API, Cognito, table,
+site), then the site is built and published. Two environments, each in its own AWS account:
+
+| Environment | Deploys when |
+|---|---|
+| `dev` | every push to the `dev` branch |
+| `prod` | every push to `main` (a merged PR); also by hand: Actions → *Deploy production* → *Run workflow*, typing `producao` |
+
+```
+push ──► tests (CI) ──► terraform plan ──► check the plan ──► terraform apply ──► build + publish the site
+```
+
+The deploy **refuses a plan that would delete or recreate the Cognito user pool or the DynamoDB
+table** (every login and all the data): that stops it before anything is applied.
+
+### One-time setup
+
+1. **In each AWS account:** create an IAM policy from [`docs/iam-deploy-policy.json`](docs/iam-deploy-policy.json)
+   (it only touches `task-pulse-*` resources), a user without console access with that policy,
+   and an access key for it.
+2. **On GitHub** (Settings → Environments), create `dev` and `producao`, each with:
+   - secrets `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY`
+   - variables `AWS_ACCOUNT_ID` (the deploy stops if the key is from another account) and `AWS_REGION`
+3. **First deploy:** create the `dev` branch. The site's address shows up in the Actions run summary.
+4. Recommended for `producao`: *Required reviewers* (you approve each deploy) and *Deployment
+   branches* = only `main`.
+
+### Create a login
+
+Actions → *Create user* → choose the environment, type the person's name and the phone (DDD + number,
+digits only, e.g. `11987654321`). The workflow creates the login with a ready, permanent password and
+shows it in the run's summary (once; keep the repository private, since whoever can open the run sees
+it). There is no open sign-up. For a phone that already has a login, tick *reset_password* to give it a
+new password.
+
+## Security and cost
+
+- Encrypted table with continuous backups; deletion protection in `prod`.
+- API Gateway rate-limits requests. The site may only talk to itself, Cognito and the API (CSP).
+- Pay-per-use: close to zero with no traffic.
