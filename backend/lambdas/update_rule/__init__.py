@@ -1,0 +1,1 @@
+"""Lambda update_rule: PUT /projects/{id}/rules/{rule_id}. Changes a rule. Once a task finished under it, only its end can change (and not to before that task): to change the values, create a new rule from now on."""

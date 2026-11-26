@@ -1,0 +1,1 @@
+"""Lambda get_billing: GET /projects/{id}/billing. The billing of a project for ?from=&to=: every task concluded in it, its value, paid / not paid / open, the bonus and the totals (should receive, received)."""

@@ -1,0 +1,4 @@
+{
+  "route": "DELETE /projects/{id}/payments/{payment_id}",
+  "database": "write"
+}

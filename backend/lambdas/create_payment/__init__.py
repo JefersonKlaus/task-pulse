@@ -1,0 +1,1 @@
+"""Lambda create_payment: POST /projects/{id}/payments. Registers what was received for a period: every open task concluded in it is paid, except `not_paid_task_ids`. Answers the billing of that period."""

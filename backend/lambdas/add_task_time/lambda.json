@@ -1,0 +1,4 @@
+{
+  "route": "POST /projects/{id}/tasks/{task_id}/time",
+  "database": "write"
+}

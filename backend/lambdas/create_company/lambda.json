@@ -1,0 +1,4 @@
+{
+  "route": "POST /companies",
+  "database": "write"
+}
