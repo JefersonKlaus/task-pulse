@@ -161,17 +161,33 @@ It only listens on 127.0.0.1.
 
 ## Deploy
 
-Everything goes through GitHub Actions, with no terminal: a push runs every test (Python, TypeScript
+Everything goes through GitHub Actions, with no terminal: a deploy runs every test (Python, TypeScript
 and the browser test), then Terraform creates or updates all of AWS (Lambdas, API, Cognito, table,
 site), then the site is built and published. Two environments, each in its own AWS account:
 
 | Environment | Deploys when |
 |---|---|
-| `dev` | every push to the `dev` branch |
-| `prod` | every push to `main` (a merged PR); also by hand: Actions → *Deploy production* → *Run workflow*, typing `producao` |
+| `dev` | every merge into `main` (which only comes from `dev`) |
+| `prod` | no automatic trigger yet; only by hand: Actions → *Deploy production* → *Run workflow*, typing `producao` |
+
+### Branches
 
 ```
-push ──► tests (CI) ──► terraform plan ──► check the plan ──► terraform apply ──► build + publish the site
+feature branch (from dev) ──PR──► dev ──PR──► main ──► deploy dev
+```
+
+- Create each branch from `dev` and open its pull request into `dev`.
+- `main` takes no direct pushes: only a pull request, and only from `dev`
+  ([branch-flow.yml](.github/workflows/branch-flow.yml)), with CI green. A GitHub ruleset on `main`
+  enforces it (Settings → Rules → Rulesets → *main*): no direct push, no force push, no deletion,
+  pull request required, and the checks *Only dev into main*, *Backend (tests)*,
+  *Frontend (TypeScript and browser)* and *Terraform (format and validation)* must pass. To create it:
+  Settings → Rules → Rulesets → *New ruleset* → *Import a ruleset*, with
+  [`docs/main-ruleset.json`](docs/main-ruleset.json). Merges into main are merge commits, so `dev`
+  and `main` keep the same history.
+
+```
+merge into main ──► tests (CI) ──► terraform plan ──► check the plan ──► terraform apply ──► build + publish the site
 ```
 
 The deploy **refuses a plan that would delete or recreate the Cognito user pool or the DynamoDB
@@ -185,9 +201,10 @@ table** (every login and all the data): that stops it before anything is applied
 2. **On GitHub** (Settings → Environments), create `dev` and `producao`, each with:
    - secrets `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY`
    - variables `AWS_ACCOUNT_ID` (the deploy stops if the key is from another account) and `AWS_REGION`
-3. **First deploy:** create the `dev` branch. The site's address shows up in the Actions run summary.
-4. Recommended for `producao`: *Required reviewers* (you approve each deploy) and *Deployment
-   branches* = only `main`.
+3. **First deploy:** merge a pull request from `dev` into `main`. The site's address shows up in the
+   Actions run summary.
+4. Recommended: *Deployment branches* = only `main` on both Environments, and *Required reviewers*
+   (you approve each deploy) on `producao`.
 
 ### Create a login
 
