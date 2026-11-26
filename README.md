@@ -11,6 +11,26 @@ should have been received and what was received.
 
 The app's screens are in Brazilian Portuguese; code and docs are in English.
 
+## What it looks like
+
+Made for the phone first: one column, the menu at the bottom, every button big enough for a thumb.
+
+| Tarefas | Faturamento | Projeto e regras | Entrar |
+|---|---|---|---|
+| ![Open tasks as cards: time worked, + Tempo and Concluir](docs/screenshots/phone-tasks.png) | ![Billing: what should be received, the tasks with a box to untick the ones that won't be paid, and the form to register what was received](docs/screenshots/phone-billing.png) | ![A project with its pricing rule in force: hourly rate, flat last hour, only approved tasks paid, bonus tiers](docs/screenshots/phone-project.png) | ![Login by phone and password](docs/screenshots/phone-login.png) |
+
+<p>
+  <img src="docs/screenshots/phone-tasks-dark.png" width="24%" alt="Tarefas in dark mode">
+</p>
+
+The phone follows the system's dark mode (above). From 1024px wide the menu becomes a sidebar and the
+lists become tables:
+
+![Tarefas on a wide screen](docs/screenshots/wide-tasks.png)
+![Faturamento on a wide screen](docs/screenshots/wide-billing.png)
+
+These pictures come from the local server's demo data: `python dev.py screenshots` takes them again.
+
 ## Run it locally
 
 Needs Python 3.12+ and Node 22.
@@ -32,6 +52,7 @@ when you stop the server.
 python dev.py test    # backend tests + TypeScript type check (seconds)
 python dev.py e2e     # builds the frontend, then the browser test in a real Chromium
 python dev.py all     # both: what CI runs
+python dev.py screenshots   # the pictures above, again (docs/screenshots)
 ```
 
 | Tests | Where |
