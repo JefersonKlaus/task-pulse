@@ -43,8 +43,13 @@ def screens(page, prefix):
     page.locator("#billing-tasks tbody input[type=checkbox]").first.uncheck()   # one the company won't pay
     shoot(page, f"{prefix}-billing", whole=True)
 
+    go(page, "Empresas")
+    page.locator("[data-company]").first.click()                                 # a company and its projects
+    expect(page.locator("#company-projects")).to_be_visible()
+    shoot(page, f"{prefix}-company")
+
     go(page, "Projetos")
-    page.locator(".list-item.clickable").nth(1).click()                          # a project with a flat last hour
+    page.locator("[data-project='Code review']").click()                         # a project with a flat last hour
     expect(page.locator("#rules")).to_be_visible()
     shoot(page, f"{prefix}-project")
 

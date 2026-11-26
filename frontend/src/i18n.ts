@@ -44,6 +44,7 @@ const EN: Record<string, string> = {
   "Faturamento": "Billing",
   "Pagamentos": "Payments",
   "Projetos": "Projects",
+  "Empresas": "Companies",
   "Configurações": "Settings",
   "Sair": "Log out",
   "Modo local, sem login": "Local mode, no login",
@@ -84,8 +85,8 @@ const EN: Record<string, string> = {
   "Todas": "All",
   "Nova tarefa": "New task",
   "Nenhum projeto ainda": "No projects yet",
-  "Cadastre a empresa e o projeto (com o valor hora ou fixo) em Projetos.":
-    "Add the company and the project (with its hourly or fixed rate) in Projects.",
+  "Cadastre a empresa em Empresas e o projeto (com o valor hora ou fixo) em Projetos.":
+    "Add the company in Companies and the project (with its hourly or fixed rate) in Projects.",
   "Nenhuma tarefa": "No tasks",
   "Nada em aberto neste período.": "Nothing open in this period.",
   "Nada neste período.": "Nothing in this period.",
@@ -181,13 +182,17 @@ const EN: Record<string, string> = {
   "sem regra de valor em vigor": "no pricing rule in force",
   "{count} em aberto": "{count} open",
   "Deadline {date}": "Deadline {date}",
-  "Nenhum projeto.": "No projects.",
-  "Empresas e projetos": "Companies and projects",
   "Nova empresa": "New company",
   "Nenhuma empresa ainda": "No companies yet",
-  "Cadastre a empresa para a qual você presta serviço, depois os projetos dela.":
-    "Add the company you work for, then its projects.",
   "Editar empresa": "Edit company",
+  "Excluir empresa": "Delete company",
+  "{count} tarefa(s) em aberto": "{count} open task(s)",
+  "Cadastre a empresa para a qual você presta serviço. Depois, os projetos dela.":
+    "Add the company you work for. Then, its projects.",
+  "Nenhum projeto nesta empresa ainda. Uma empresa pode ter vários projetos, cada um com o seu valor.":
+    "No projects in this company yet. A company can have many projects, each with its own rate.",
+  "Todo projeto é de uma empresa. Cadastre a empresa primeiro.": "Every project belongs to a company. Add the company first.",
+  "Uma empresa pode ter vários projetos, cada um com o seu valor.": "A company can have many projects, each with its own rate.",
   "Empresa salva.": "Company saved.",
   "Editar projeto": "Edit project",
   "Excluir projeto": "Delete project",

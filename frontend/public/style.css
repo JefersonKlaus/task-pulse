@@ -64,9 +64,9 @@ body:not(.signed-in) { background: var(--ink); }
 #sidebar { position: fixed; z-index: 20; left: 0; right: 0; bottom: 0; background: var(--surface);
   border-top: 1px solid var(--border); padding-bottom: env(safe-area-inset-bottom); }
 #sidebar .brand, #sidebar .sidebar-footer { display: none; }
-nav { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); height: var(--nav-height); }
+nav { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); height: var(--nav-height); }
 nav button { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; min-width: 0;
-  padding: 6px 2px; border: 0; background: none; font: 500 12px var(--font); color: var(--muted); cursor: pointer; }
+  padding: 6px 2px; border: 0; background: none; font: 500 11px var(--font); color: var(--muted); cursor: pointer; }
 nav button span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 nav button[aria-current="page"] { color: var(--brand); font-weight: 600; }
 nav button[aria-current="page"] .icon-svg { stroke-width: 2.4; }
@@ -348,3 +348,5 @@ dialog.dialog > form > .actions:last-child button { flex: 1; }
 .form-section { margin-top: 20px; }
 .tier-row { display: grid; grid-template-columns: 1fr 1fr auto; gap: 8px; margin-bottom: 8px; }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+
+.one-line { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

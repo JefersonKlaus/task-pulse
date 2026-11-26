@@ -5,6 +5,7 @@ import { getProfile, isSignedIn, signOut } from "./auth.js";
 import { N_, isLang, lang, setLang, t } from "./i18n.js";
 import { h, ICONS, icon, render } from "./util.js";
 import { mount as billing } from "./screens/billing.js";
+import { mount as companies } from "./screens/companies.js";
 import { loginScreen } from "./screens/login.js";
 import { mount as payments } from "./screens/payments.js";
 import { mount as projects } from "./screens/projects.js";
@@ -15,7 +16,7 @@ const content = document.getElementById("content")!;
 type Mount = (area: HTMLElement) => Promise<void>;
 const SCREENS: [string, Mount, keyof typeof ICONS][] = [            // [name in the menu, mount, icon]
   [N_("Tarefas"), tasks, "tasks"], [N_("Faturamento"), billing, "billing"], [N_("Pagamentos"), payments, "payments"],
-  [N_("Projetos"), projects, "projects"]];
+  [N_("Projetos"), projects, "projects"], [N_("Empresas"), companies, "companies"]];
 const SETTINGS = -1;
 
 function start(page = 0): void {
