@@ -251,7 +251,7 @@ it in `t("...")` and add its English to `EN`.
 
 The login is the **e-mail and a password**. Anyone can create an account on the site (*Criar conta*:
 name, e-mail, password with 10+ characters, upper and lower case and a number). Cognito e-mails a
-6-digit code, and the account only logs in after the code is typed (*Reenviar código* sends another).
+6-digit code (the e-mail is in English, set in [infra/cognito.tf](infra/cognito.tf)), and the account only logs in after the code is typed (*Reenviar código* sends another).
 Each account sees only its own data. Cognito's own sender is used: no setup, but about 50 e-mails a
 day; for more, configure SES in [infra/cognito.tf](infra/cognito.tf).
 

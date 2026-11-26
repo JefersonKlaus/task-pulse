@@ -23,10 +23,11 @@ resource "aws_cognito_user_pool" "login" {
     email_sending_account = "COGNITO_DEFAULT"
   }
 
+  # The e-mail with the sign-up code (also sent by "Reenviar código"), in English. {####} is the code.
   verification_message_template {
     default_email_option = "CONFIRM_WITH_CODE"
-    email_subject        = "Task Pulse: seu código de confirmação"
-    email_message        = "Seu código para confirmar o e-mail no Task Pulse é {####}. Se não foi você, ignore este e-mail."
+    email_subject        = "Task Pulse: your verification code"
+    email_message        = "Your code to confirm your e-mail on Task Pulse is {####}. If this wasn't you, ignore this e-mail."
   }
 
   password_policy {
