@@ -63,4 +63,4 @@ def test_bad_bodies_are_400(call):
     assert call("POST", "/companies", raw="[1]")[0] == 400
     assert call("POST", "/companies", raw="x" * 30_000)[0] == 400
     status, body = call("POST", "/companies", {"name": ""})
-    assert status == 400 and "obrigatório" in body["error"]
+    assert status == 400 and body["error"] == "Name: required"         # English unless asked for pt-BR

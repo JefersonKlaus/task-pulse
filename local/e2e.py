@@ -89,12 +89,14 @@ def run():
     month = date.today().strftime("%Y-%m")
     with sync_playwright() as p:
         browser = p.chromium.launch()
-        page = browser.new_page(locale="pt-BR")             # the system's first language
+        page = browser.new_page(locale="pt-BR")             # a browser in Portuguese still opens in English
         cognito = FakeCognito()
         watch(page, errors)
         page.route("https://cognito-idp.sa-east-1.amazonaws.com/", cognito)
         page.goto(url_of(server))
 
+        expect(page.locator("h2")).to_have_text("Log in")                # English is the default
+        page.click(".login-languages >> text=Português (Brasil)")         # chosen on the login screen
         # sign up: a weak password, then a good one; the e-mailed code, first wrong, then right
         expect(page.locator("h2")).to_have_text("Entrar")
         page.click("text=Criar conta")
@@ -268,6 +270,9 @@ def run_without_login():
         page = browser.new_page(viewport={"width": 390, "height": 800}, locale="pt-BR")   # a phone
         watch(page, errors)
         page.goto(url_of(server))
+        expect(page.locator("h1")).to_have_text("Tasks")                             # English by default
+        page.evaluate("localStorage.setItem('pulse.lang', 'pt-BR')")                 # as if chosen before
+        page.reload()
         expect(page.locator("h1")).to_have_text("Tarefas")
         expect(page.locator("[data-task]")).to_have_count(3)                          # the open demo tasks
         width = page.evaluate("document.documentElement.scrollWidth")

@@ -29,6 +29,11 @@ def shoot(page, name, whole=False):
     print("  ", f"docs/screenshots/{name}.png")
 
 
+def portuguese(page):
+    """English is the default; these pictures are of the app in Portuguese, as chosen in Configurações."""
+    page.add_init_script("localStorage.getItem('pulse.lang') || localStorage.setItem('pulse.lang', 'pt-BR')")
+
+
 def go(page, menu):
     page.click(f"nav >> text={menu}")
 
@@ -67,6 +72,7 @@ def run():
     with sync_playwright() as p:
         browser = p.chromium.launch()
         phone = browser.new_page(viewport=PHONE, device_scale_factor=2, color_scheme="light", locale="pt-BR")
+        portuguese(phone)
         screens(phone, "phone")
         phone.goto(f"http://127.0.0.1:{login.server_address[1]}/")
         expect(phone.locator("#l-email")).to_be_visible()
@@ -78,6 +84,8 @@ def run():
         shoot(phone, "phone-signup", whole=True)
 
         settings_page = browser.new_page(viewport=PHONE, device_scale_factor=2, color_scheme="light", locale="pt-BR")
+
+        portuguese(settings_page)
         settings_page.goto(url)
         settings_page.click("#top-bar .settings-link")
         expect(settings_page.locator("#settings-language")).to_be_visible()
@@ -89,11 +97,15 @@ def run():
         shoot(english, "phone-tasks-en")
 
         dark = browser.new_page(viewport=PHONE, device_scale_factor=2, color_scheme="dark", locale="pt-BR")
+
+        portuguese(dark)
         dark.goto(url)
         expect(dark.locator("[data-task]").first).to_be_visible()
         shoot(dark, "phone-tasks-dark")
 
         wide = browser.new_page(viewport=WIDE, color_scheme="light", locale="pt-BR")
+
+        portuguese(wide)
         wide.goto(url)
         expect(wide.locator("[data-task]").first).to_be_visible()
         shoot(wide, "wide-tasks")
