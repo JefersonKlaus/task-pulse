@@ -2,7 +2,8 @@
 // rules. A company has as many projects as needed (screens/companies.ts registers the companies).
 // A rule says how the project pays from a moment on (hourly with an optional flat last hour, or fixed per
 // task; whether only approved tasks are paid; the bonus by approved tasks). A task is priced by the rule in
-// force when it was finished, so a new rule never changes what was finished before it.
+// force when it was finished, so a new rule never changes what was finished before it. A project also has
+// as many deadlines as needed: weekly, monthly or on a day (screens/deadlines.ts).
 import * as api from "../api.js";
 import { t } from "../i18n.js";
 import type { BonusTier, Company, Project, Rule } from "../types.js";
@@ -11,6 +12,7 @@ import {
   notify, nowLocal, render, toCents,
 } from "../util.js";
 import { companyForm } from "./companies.js";
+import { deadlineFields, deadlinesCard, nextDeadlineText } from "./deadlines.js";
 import { state } from "./filters.js";
 
 /** Where a project's page goes back to: the list of projects, or the company it was opened from. */
@@ -56,7 +58,7 @@ export async function mount(area: HTMLElement): Promise<void> {
     list);
 }
 
-/** A project in a list: name (and its company), the rule in force, open tasks and deadline. */
+/** A project in a list: name (and its company), the rule in force, open tasks and the nearest deadline. */
 export function projectRow(p: Project, showCompany: boolean, open: () => unknown): HTMLElement {
   const rule = p.rules.find((r) => r.id === p.current_rule_id);
   return h("li", { className: "list-item clickable", tabIndex: 0, "data-project": p.name, onclick: open,
@@ -67,7 +69,7 @@ export function projectRow(p: Project, showCompany: boolean, open: () => unknown
     h("div", { className: "task-meta" },
       showCompany && h("span", { className: "company-name" }, p.company_name),
       h("span", {}, t("{count} em aberto", { count: p.open_tasks || 0 })),
-      p.deadline && h("span", {}, t("Deadline {date}", { date: formatDate(p.deadline) })))),
+      nextDeadlineText(p) && h("span", { className: "next-deadline" }, nextDeadlineText(p)))),
   h("span", { className: "chevron", "aria-hidden": "true" }, "›"));
 }
 
@@ -99,9 +101,12 @@ function drawProject(area: HTMLElement, project: Project, companies: Company[], 
         } }])),
     h("div", { className: "card" }, h("dl", { className: "details" },
       h("dt", {}, t("Empresa")), h("dd", {}, project.company_name),
-      h("dt", {}, t("Moeda")), h("dd", {}, project.currency),
-      h("dt", {}, t("Deadline")), h("dd", {}, project.deadline ? formatDate(project.deadline) : "—")),
+      h("dt", {}, t("Moeda")), h("dd", {}, project.currency)),
     project.description && h("p", { className: "notes" }, project.description)),
+    deadlinesCard(project, () => {
+      projectForm(companies, project, project.company_id, redraw);
+      document.getElementById("p-deadlines")?.scrollIntoView({ block: "center" });     // straight to them
+    }),
     h("div", { className: "card", id: "rules" },
       h("div", { className: "row" }, h("h2", {}, t("Regras de valor")),
         h("button", { className: "primary small", id: "new-rule", onclick: () => ruleForm(project, null, redraw) },
@@ -145,18 +150,18 @@ export function projectForm(companies: Company[], project: Project | null, compa
   const name = h("input", { id: "p-name", required: true, maxLength: 120, value: project?.name || "" });
   const currency = h("select", { id: "p-currency" }, CURRENCIES.map((c) =>
     h("option", { value: c, selected: c === (project?.currency || "BRL") }, c)));
-  const deadline = h("input", { id: "p-deadline", type: "date", value: project?.deadline || "" });
+  const deadlines = deadlineFields(project?.deadlines || []);
   const description = h("textarea", { id: "p-description", rows: 3, maxLength: 4000, value: project?.description || "" });
   const rule = project ? null : ruleFields(null);
   formDialog(project ? t("Editar projeto") : t("Novo projeto"), [
     field(t("Empresa"), company), field(t("Nome"), name),
-    h("div", { className: "two-columns" }, h("div", {}, field(t("Moeda"), currency)),
-      h("div", {}, field(t("Deadline (quando acaba)"), deadline))),
+    field(t("Moeda"), currency),
     field(t("Descrição"), description),
+    deadlines.element,
     rule && [h("h2", { className: "form-section" }, t("Valor")), rule.element],
   ], async () => {
     const body: Record<string, unknown> = { company_id: company.value, name: name.value, currency: currency.value,
-      deadline: deadline.value || null, description: description.value };
+      deadlines: deadlines.read(), description: description.value };
     if (rule) body.rule = rule.read();
     const saved = project ? await api.projects.update(project.id, body) : await api.projects.create(body);
     notify(t("Projeto salvo."));

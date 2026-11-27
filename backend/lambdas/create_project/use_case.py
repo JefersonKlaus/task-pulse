@@ -1,4 +1,4 @@
-"""Use case (application layer): Registers a project of a company: name, currency, deadline and, optionally, its first pricing rule (`rule`).
+"""Use case (application layer): Registers a project of a company: name, currency, deadlines and, optionally, its first pricing rule (`rule`).
 Depends only on the core's domain and ports, never on AWS."""
 from __future__ import annotations
 

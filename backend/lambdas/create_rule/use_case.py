@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import replace
 from typing import Any, Mapping
 
-from pulse_core.application import now, project_or_404, project_view
+from pulse_core.application import company, now, project_or_404, project_view
 from pulse_core.domain.errors import ValidationError
 from pulse_core.domain.models import Rule
 from pulse_core.ports import Dependencies
@@ -27,4 +27,4 @@ def create_rule(deps: Dependencies, owner: str, project_id: str, payload: Mappin
         rules.append(other)
     project = replace(project, rules=tuple(rules) + (rule,))
     deps.repo.save_project(owner, project)
-    return project_view(project, deps.repo.get_company(owner, project.company_id), now())
+    return project_view(project, company(deps, owner, project.company_id), now())

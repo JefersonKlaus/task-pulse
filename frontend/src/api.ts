@@ -37,7 +37,9 @@ export interface Period { from: string; to: string }
 
 export const companies = {
   list: () => api<Company[]>("GET", "/companies"),
-  create: (body: Partial<Company>) => api<Company>("POST", "/companies", body),
+  known: () => api<Company[]>("GET", "/companies/known"),
+  /** A well-known company (`known_id`) or one of the user's own (`name`, `notes`). */
+  create: (body: Partial<Company> & { known_id?: string }) => api<Company>("POST", "/companies", body),
   update: (id: string, body: Partial<Company>) => api<Company>("PUT", `/companies/${id}`, body),
   remove: (id: string) => api<null>("DELETE", `/companies/${id}`),
 };
