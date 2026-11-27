@@ -244,6 +244,21 @@ def run():
         expect(page.locator("#billing-totals")).to_contain_text("diferença -R$ 20,00")
         expect(page.locator("[data-task='Página de faturas']")).to_contain_text("Não paga")
         expect(page.locator("#pay-form")).to_have_count(0)
+        # a custom period (a company whose week isn't Monday-Sunday): days 2-8 have none of the tasks (day 1);
+        # ‹ moves it back by its own length (7 days), to a range that ends on day 1 and has both
+        page.select_option("#filter-kind", "custom")
+        expect(page.locator("#filter-from")).to_have_value(f"{month}-01")      # starts from the month shown
+        page.fill("#filter-from", f"{month}-02")
+        page.locator("#filter-from").dispatch_event("change")
+        page.fill("#filter-to", f"{month}-08")
+        page.locator("#filter-to").dispatch_event("change")
+        expect(page.locator("#period-label")).to_contain_text("02/")
+        expect(page.locator("#billing-tasks")).to_have_count(0)
+        page.click("button[aria-label='Período anterior']")
+        expect(page.locator("#filter-to")).to_have_value(f"{month}-01")
+        expect(page.locator("#billing-tasks tbody tr")).to_have_count(2)
+        page.select_option("#filter-kind", "month")
+        expect(page.locator("#custom-period")).to_be_hidden()
 
         page.click("nav >> text=Pagamentos")
         expect(page.locator("#payments-table tbody tr")).to_have_count(1)

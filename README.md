@@ -8,7 +8,8 @@ needed: every week on a weekday, every month on a day, or on one day; and **pric
 fixed amount per task; whether only approved tasks are paid; a bonus by approved tasks in the period),
 each valid from a moment until another one starts. Each project has **tasks** (external id, name,
 repository, description, start, time worked, finish). The **billing** page takes a company, a project
-and a period, lists every task concluded in it with its value, lets you untick the ones that will
+and a period (a month, a week from Monday to Sunday, or a custom range for companies whose week starts
+on another day), lists every task concluded in it with its value, lets you untick the ones that will
 **not** be paid and register what was received; the app then shows what was paid, what wasn't, what
 should have been received and what was received.
 
@@ -103,7 +104,7 @@ frontend/
   src/config.ts         where the API is (public/js/config.js is written by the deploy)
   src/types.ts          what the API answers
   src/util.ts           DOM helpers, money (cents), time (minutes), dates, dialogs
-  src/screens/filters.ts   company / project / period (month or week) shared by every page
+  src/screens/filters.ts   company / project / period (month, week Monday-Sunday, or custom: any first and last day) shared by every page
   src/screens/tasks.ts     Tarefas: open tasks by period, + Tempo, Concluir, Aprovar / Rejeitar
   src/screens/companies.ts Empresas: the companies, and each company's page with all its projects
   src/screens/known-companies.ts the well-known companies, one tap to add (and suggested in Nova empresa)
