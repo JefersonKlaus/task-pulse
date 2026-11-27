@@ -249,7 +249,7 @@ const EN: Record<string, string> = {
   "De {start} até {end}": "From {start} to {end}",
   "De {start} em diante": "From {start} on",
   "Só tarefas aprovadas são pagas": "Only approved tasks are paid",
-  "Tarefas concluídas e aprovadas são pagas (rejeitadas não)": "Done and approved tasks are paid (rejected ones aren't)",
+  "Tarefas concluídas, aprovadas e rejeitadas são pagas": "Done, approved and rejected tasks are paid",
   "Bônus:": "Bonus:",
   "{count}+ aprovadas = {amount}": "{count}+ approved = {amount}",
   "Regra": "Rule",

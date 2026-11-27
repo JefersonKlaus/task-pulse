@@ -1,15 +1,16 @@
 """How much a task is worth, by the rule in force when it was finished (see models.Rule).
 
 Hourly, 5h at 90/h with a 100/h flat, approved: 4 x 90 + 1 x 100 = 460. Under an hour, all of it is at
-the flat (0:30 -> 50). Not approved (DONE, REJECTED): no flat, 5 x 90 = 450 (REJECTED is always 0).
-Fixed: the fixed amount per task. With `paid_only_if_approved`, anything not APPROVED is 0.
+the flat (0:30 -> 50). Not approved (DONE, REJECTED): no flat, 5 x 90 = 450.
+Fixed: the fixed amount per task. Every concluded task is paid, rejected ones too (the companies pay for
+the work done); with `paid_only_if_approved`, only APPROVED is paid and anything else is 0.
 Values are rounded to the cent, half up.
 """
 from __future__ import annotations
 
 from typing import Iterable, Optional
 
-from .models import APPROVED, DONE, FINISHED, REJECTED, Project, Rule, Task
+from .models import APPROVED, FINISHED, Project, Rule, Task
 
 FLAT_MINUTES = 60           # "the last hour"
 
@@ -19,11 +20,9 @@ def _round_div(numerator: int, denominator: int) -> int:
 
 
 def is_paid_status(status: str, rule: Rule) -> bool:
-    if status == REJECTED:
-        return False
     if rule.paid_only_if_approved:
         return status == APPROVED
-    return status in (DONE, APPROVED)
+    return status in FINISHED                       # DONE, APPROVED and REJECTED
 
 
 def task_value(task: Task, rule: Optional[Rule]) -> int:
