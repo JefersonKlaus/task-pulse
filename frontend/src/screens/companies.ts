@@ -1,11 +1,13 @@
 // Empresas: the companies you work for. The list (with how many projects and open tasks each has), the
 // company's own page with every project of it, and the company form. A company has as many projects as
-// needed; each project has its own pricing rules (screens/projects.ts).
+// needed; each project has its own pricing rules (screens/projects.ts). The well-known companies are one tap
+// away (screens/known-companies.ts).
 import * as api from "../api.js";
 import { t } from "../i18n.js";
 import type { Company, Project } from "../types.js";
 import { actionsMenu, confirmAction, errorMessage, field, formDialog, h, notify, render } from "../util.js";
 import { state } from "./filters.js";
+import { knownCompanies, suggestKnown } from "./known-companies.js";
 import { openProject, projectForm, projectRow } from "./projects.js";
 
 export async function mount(area: HTMLElement): Promise<void> {
@@ -31,7 +33,8 @@ export async function mount(area: HTMLElement): Promise<void> {
             c.notes && h("span", { className: "one-line" }, c.notes))),
         h("span", { className: "chevron", "aria-hidden": "true" }, "›")))))
       : h("div", { className: "card empty-state" }, h("h2", {}, t("Nenhuma empresa ainda")),
-        h("p", { className: "muted" }, t("Cadastre a empresa para a qual você presta serviço. Depois, os projetos dela."))));
+        h("p", { className: "muted" }, t("Cadastre a empresa para a qual você presta serviço. Depois, os projetos dela."))),
+    knownCompanies(companies, () => mount(area)));
 }
 
 /** A company's page: its details and every project of it, with Novo projeto already set to it. */
@@ -71,7 +74,8 @@ export async function openCompany(area: HTMLElement, id: string): Promise<void> 
 export function companyForm(company: Company | null, done: (saved: Company) => void | Promise<void>): void {
   const name = h("input", { id: "c-name", required: true, maxLength: 100, value: company?.name || "" });
   const notes = h("textarea", { id: "c-notes", rows: 3, maxLength: 2000, value: company?.notes || "" });
-  formDialog(company ? t("Editar empresa") : t("Nova empresa"), [field(t("Nome"), name), field(t("Observações"), notes)],
+  formDialog(company ? t("Editar empresa") : t("Nova empresa"),
+    [field(t("Nome"), name), company ? null : suggestKnown(name, notes), field(t("Observações"), notes)],
     async () => {
       const body = { name: name.value, notes: notes.value };
       const saved = company ? await api.companies.update(company.id, body) : await api.companies.create(body);

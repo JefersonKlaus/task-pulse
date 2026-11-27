@@ -194,6 +194,13 @@ const EN: Record<string, string> = {
   "Todo projeto é de uma empresa. Cadastre a empresa primeiro.": "Every project belongs to a company. Add the company first.",
   "Uma empresa pode ter vários projetos, cada um com o seu valor.": "A company can have many projects, each with its own rate.",
   "Empresa salva.": "Company saved.",
+  "Empresas conhecidas": "Well-known companies",
+  "Toque para adicionar. As que não estão aqui, cadastre em Nova empresa.":
+    "Tap to add. For the ones not listed here, use New company.",
+  "{name} adicionada.": "{name} added.",
+  "Plataforma da Labelbox.": "Run by Labelbox.",
+  "Plataforma da Toloka.": "Run by Toloka.",
+  "Plataforma da Scale AI.": "Run by Scale AI.",
   "Editar projeto": "Edit project",
   "Excluir projeto": "Delete project",
   "Excluir o projeto \"{name}\" com todas as tarefas e pagamentos?":
