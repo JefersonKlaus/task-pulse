@@ -20,6 +20,7 @@ Made for the phone first: one column, the menu at the bottom, every button big e
 | ![Open tasks as cards: time worked, + Tempo and Concluir](docs/screenshots/phone-tasks.png) | ![Billing: what should be received, the tasks with a box to untick the ones that won't be paid, and the form to register what was received](docs/screenshots/phone-billing.png) | ![A company's page with its projects and Novo projeto](docs/screenshots/phone-company.png) | ![A project with its pricing rule in force: hourly rate, flat last hour, only approved tasks paid, bonus tiers](docs/screenshots/phone-project.png) |
 
 <p>
+  <img src="docs/screenshots/phone-companies.png" width="24%" alt="Empresas: the companies registered and the well-known ones, added with one tap">
   <img src="docs/screenshots/phone-signup.png" width="24%" alt="Sign-up: name, e-mail, password twice">
   <img src="docs/screenshots/phone-login.png" width="24%" alt="Login by e-mail and password">
   <img src="docs/screenshots/phone-settings.png" width="24%" alt="Settings: language, name and password">
@@ -27,7 +28,7 @@ Made for the phone first: one column, the menu at the bottom, every button big e
   <img src="docs/screenshots/phone-tasks-dark.png" width="24%" alt="Tarefas in dark mode">
 </p>
 
-Login by e-mail and password; *Configurações* (the gear, apart from the menu) with the language, the name and the password; the app in English; and the system's dark mode (above). From 1024px wide the menu becomes a sidebar and the
+*Empresas*, where the well-known companies of AI training work (Alignerr, Outlier, DataAnnotation, Mercor…) are added with one tap and only the lesser-known ones need the form; login by e-mail and password; *Configurações* (the gear, apart from the menu) with the language, the name and the password; the app in English; and the system's dark mode (above). From 1024px wide the menu becomes a sidebar and the
 lists become tables:
 
 ![Tarefas on a wide screen](docs/screenshots/wide-tasks.png)
@@ -102,6 +103,7 @@ frontend/
   src/screens/filters.ts   company / project / period (month or week) shared by every page
   src/screens/tasks.ts     Tarefas: open tasks by period, + Tempo, Concluir, Aprovar / Rejeitar
   src/screens/companies.ts Empresas: the companies, and each company's page with all its projects
+  src/screens/known-companies.ts the well-known companies, one tap to add (and suggested in Nova empresa)
   src/screens/projects.ts  Projetos: every project (filter by company), a project's page and its pricing rules
   src/screens/billing.ts   Faturamento: a project's period, untick what won't be paid, register what was received
   src/screens/payments.ts  Pagamentos: every payment, should receive x received

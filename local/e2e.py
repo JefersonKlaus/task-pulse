@@ -158,6 +158,15 @@ def run():
         expect(page.locator("#company-projects [data-project]")).to_have_count(2)   # one company, many projects
         page.click("nav >> text=Empresas")
         expect(page.locator("[data-company='Etho']")).to_contain_text("2 projeto(s)")
+        # the well-known companies: one tap adds one (with who runs it), and it leaves the list
+        page.click("#known-companies [data-known='Outlier']")
+        expect(page.locator("[data-company='Outlier']")).to_contain_text("Plataforma da Scale AI.")
+        expect(page.locator("#known-companies [data-known='Outlier']")).to_have_count(0)
+        expect(page.locator("#known-companies [data-known='Alignerr']")).to_be_visible()
+        page.click("#new-company")                                         # Nova empresa suggests them too
+        page.fill("#c-name", "mindrift")
+        expect(page.locator("#c-notes")).to_have_value("Plataforma da Toloka.")
+        page.click("dialog >> text=Cancelar")
         page.click("nav >> text=Projetos")
         expect(page.locator("#project-list [data-project]")).to_have_count(2)
         page.click("[data-project='Portal']")
@@ -267,6 +276,8 @@ def run_without_login():
         expect(page.locator("nav")).to_be_visible()                                   # the bottom bar
         page.click("nav >> text=Empresas")
         expect(page.locator("[data-company]")).to_have_count(2)
+        expect(page.locator("#known-companies [data-known='Alignerr']")).to_have_count(0)   # registered already
+        expect(page.locator("#known-companies [data-known='Outlier']")).to_be_visible()
         page.click("nav >> text=Projetos")
         expect(page.locator("#project-list [data-project]")).to_have_count(3)
         page.click("#top-bar .settings-link")                                      # Configurações, on a phone
