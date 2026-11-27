@@ -5,13 +5,13 @@
 import * as api from "../api.js";
 import { t } from "../i18n.js";
 import type { Company, Project } from "../types.js";
-import { actionsMenu, confirmAction, errorMessage, field, formDialog, h, notify, render } from "../util.js";
+import { actionsMenu, confirmAction, errorMessage, field, formDialog, h, loading, notify, render } from "../util.js";
 import { state } from "./filters.js";
 import { knownCompanies, suggestKnown } from "./known-companies.js";
 import { openProject, projectForm, projectRow } from "./projects.js";
 
 export async function mount(area: HTMLElement): Promise<void> {
-  render(area, h("p", { className: "notice" }, t("Carregando…")));
+  render(area, loading());
   let companies: Company[];
   try { companies = await api.companies.list(); }
   catch (error) { return render(area, h("p", { className: "notice" }, errorMessage(error))); }
@@ -39,7 +39,7 @@ export async function mount(area: HTMLElement): Promise<void> {
 
 /** A company's page: its details and every project of it, with Novo projeto already set to it. */
 export async function openCompany(area: HTMLElement, id: string): Promise<void> {
-  render(area, h("p", { className: "notice" }, t("Carregando…")));
+  render(area, loading());
   let companies: Company[], projects: Project[];
   try { [companies, projects] = await Promise.all([api.companies.list(), api.projects.list(id)]); }
   catch (error) { return render(area, h("p", { className: "notice" }, errorMessage(error))); }

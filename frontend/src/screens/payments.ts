@@ -3,11 +3,11 @@
 import * as api from "../api.js";
 import { t } from "../i18n.js";
 import type { Company, PaymentList, Project } from "../types.js";
-import { actionsMenu, confirmAction, errorMessage, formatDate, formatMoney, h, notify, render } from "../util.js";
+import { actionsMenu, confirmAction, errorMessage, formatDate, formatMoney, h, loading, notify, render } from "../util.js";
 import { filterBar, state } from "./filters.js";
 
 export async function mount(area: HTMLElement): Promise<void> {
-  render(area, h("p", { className: "notice" }, t("Carregando…")));
+  render(area, loading());
   let companies: Company[], projects: Project[];
   try { [companies, projects] = await Promise.all([api.companies.list(), api.projects.list()]); }
   catch (error) { return render(area, h("p", { className: "notice" }, errorMessage(error))); }
@@ -16,7 +16,7 @@ export async function mount(area: HTMLElement): Promise<void> {
     filterBar({ companies, projects, showPeriod: false, onchange: () => void load() }), list);
 
   async function load(): Promise<void> {
-    render(list, h("p", { className: "notice" }, t("Carregando…")));
+    render(list, loading());
     try { draw(await api.billing.payments({ company_id: state.companyId, project_id: state.projectId })); }
     catch (error) { render(list, h("p", { className: "notice" }, errorMessage(error))); }
   }

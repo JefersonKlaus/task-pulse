@@ -139,6 +139,8 @@ def run():
         page.click("#new-project")
         page.fill("#p-name", "Aplicativo")
         page.click("dialog label.choice:has-text('Valor fixo')")
+        expect(page.locator("#r-hourly")).to_be_hidden()                  # fixed value: no hourly fields
+        expect(page.locator("#r-flat")).to_be_hidden()
         page.fill("#r-fixed", "350")
         page.click("dialog >> text=Salvar")
         expect(page.locator("#company-projects [data-project]")).to_have_count(1)

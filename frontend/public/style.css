@@ -119,6 +119,18 @@ h2 { font-size: 1.2rem; font-weight: 700; }
 .hint { margin-top: 0; }
 .notes { white-space: pre-line; }
 .notice { color: var(--muted); text-align: center; padding: 24px 0; }
+[hidden] { display: none !important; }            /* even on elements a class gives display: grid or flex */
+/* loading: a spinning ring and "Carregando…" while a screen's data comes; buttons show the ring while they wait */
+.loading { display: flex; align-items: center; justify-content: center; gap: 10px; padding: 40px 0;
+  color: var(--muted); font-weight: 500; }
+.spinner { width: 22px; height: 22px; flex-shrink: 0; border: 3px solid var(--border); border-top-color: var(--brand);
+  border-radius: 50%; animation: spin .8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+button[aria-busy="true"] { position: relative; color: transparent !important; }
+button[aria-busy="true"]::after { content: ""; position: absolute; inset: 0; margin: auto; width: 18px; height: 18px;
+  border: 2.5px solid currentColor; border-color: var(--on-brand) var(--on-brand) transparent transparent;
+  border-radius: 50%; animation: spin .8s linear infinite; }
+button.secondary[aria-busy="true"]::after { border-color: var(--brand) var(--brand) transparent transparent; }
 .notice-warn { margin: 8px 0; padding: 10px 12px; border-radius: 10px; background: var(--warn-light); color: var(--danger);
   font-size: .9rem; font-weight: 500; }
 label, .field-label { display: block; margin: 12px 0 6px; font-size: .85rem; font-weight: 600; color: var(--text); }
@@ -352,6 +364,7 @@ dialog.dialog > form > .actions:last-child button { flex: 1; }
 .rule .badge + .muted, .rule strong + .muted { margin-top: 4px; }
 .form-section { margin-top: 20px; }
 .tier-row { display: grid; grid-template-columns: 1fr 1fr auto; gap: 8px; margin-bottom: 8px; }
-@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; }
+  .spinner, button[aria-busy="true"]::after { animation-duration: 2.4s; } }
 
 .one-line { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
