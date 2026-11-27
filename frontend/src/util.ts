@@ -134,7 +134,7 @@ export function openDialog(title: string, ...children: Child[]): HTMLDialogEleme
 export function formDialog(title: string, fields: Child[], save: () => Promise<boolean | void>,
   submitText = t("Salvar")): HTMLDialogElement {
   const submit = h("button", { className: "primary", type: "submit" }, submitText);
-  const form = h("form", {}, fields, h("div", { className: "actions" }, submit,
+  const form = h("form", {}, h("div", { className: "dialog-body" }, fields), h("div", { className: "actions" }, submit,
     h("button", { className: "secondary", type: "button", onclick: () => dialog.close() }, t("Cancelar"))));
   const dialog = openDialog(title, form);
   form.addEventListener("submit", (e) => {
