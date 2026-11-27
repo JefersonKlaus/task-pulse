@@ -1,12 +1,15 @@
 """The API as API Gateway calls it: routes from lambda.json, login, ids, bodies and status codes."""
 import json
+from datetime import date
 from pathlib import Path
 
 import pytest
 
 from api_gateway import ROUTES, dispatch
 from memory_repository import MemoryRepository
+from pulse_core.domain.models import Company
 from pulse_core.ports import Dependencies
+from seed import seed
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -30,8 +33,47 @@ def test_every_lambda_has_a_route_and_a_database_access():
         data = json.loads(config.read_text(encoding="utf-8"))
         assert data["database"] in ("read", "write"), config
         method = data["route"].split()[0]
-        assert (data["database"] == "read") == (method == "GET"), config
+        assert method == "GET" or data["database"] == "write", config     # a GET may write (list_companies adopts)
     assert len(ROUTES) == len(list((ROOT / "backend" / "lambdas").glob("*/lambda.json")))
+
+
+WRITES = ("save_company", "delete_company", "save_project", "delete_project", "save_tasks", "delete_tasks",
+          "save_payment", "delete_payments")
+
+
+class ReadOnly:
+    """What a "read" Lambda gets in AWS: a role that can't write. Here, writing fails the request."""
+    def __init__(self, repo):
+        self.repo = repo
+
+    def __getattr__(self, name):
+        if name in WRITES:
+            raise AssertionError(f"a read-only Lambda called {name}")
+        return getattr(self.repo, name)
+
+
+def test_read_only_lambdas_never_write():
+    """In AWS a "read" Lambda can't write (infra/lambda.tf): if its use case writes, every call is a 500.
+    Each one runs on the demo data plus a company typed by hand with a standard name (listing the
+    companies adopts it: a write, so list_companies must be "write")."""
+    memory = MemoryRepository()
+    seed(Dependencies(memory), "u1", date.today())
+    memory.save_company("u1", Company("by-hand", "OUTLIER"))
+    project = memory.list_projects("u1")[0].id
+    deps = Dependencies(ReadOnly(memory))
+    checked = []
+    for config in sorted((ROOT / "backend" / "lambdas").glob("*/lambda.json")):
+        data = json.loads(config.read_text(encoding="utf-8"))
+        if data["database"] != "read":
+            continue
+        handle = next(h for _, _, name, h in ROUTES if name == config.parent.name)
+        event = {"requestContext": {"http": {"method": "GET"}, "authorizer": {"jwt": {"claims": {"sub": "u1"}}}},
+                 "pathParameters": {"id": project} if "{id}" in data["route"] else {},
+                 "queryStringParameters": {"from": "2026-11-01", "to": "2026-11-30"}, "headers": {}}
+        response = handle(event, deps)
+        assert response["statusCode"] == 200, (config.parent.name, response)
+        checked.append(config.parent.name)
+    assert "list_projects" in checked and "list_companies" not in checked
 
 
 def test_full_flow_status_codes(call):
