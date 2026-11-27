@@ -6,11 +6,13 @@ import {
 } from "../auth.js";
 import { LANGUAGES, lang, setLang, t } from "../i18n.js";
 import { errorMessage, h, notify, render, revealable, whileDisabled } from "../util.js";
+import { aboutPage } from "./about.js";
 
 const passwordRule = () => t("10+ caracteres, com maiúscula, minúscula e número");
 const content = () => document.getElementById("content")!;
 
-/** The card every screen here shares: the brand on top, then the form, then the language switch. */
+/** The card every screen here shares: the brand on top, then the form, then the language switch and Sobre
+ * (readable without an account; Voltar comes back to this same screen). */
 function card(form: HTMLFormElement, redraw: () => void, ...children: (Node | false | null | undefined)[]): HTMLFormElement {
   form.className = "card login";
   form.prepend(h("div", { className: "login-brand" }, h("span", { className: "logo", "aria-hidden": "true" }),
@@ -19,6 +21,9 @@ function card(form: HTMLFormElement, redraw: () => void, ...children: (Node | fa
   form.append(h("p", { className: "login-languages" }, LANGUAGES.map(([code, name]) =>
     h("button", { type: "button", className: "link", lang: code, "aria-pressed": String(code === lang()),
       onclick: () => { setLang(code); redraw(); } }, name))));
+  form.append(h("p", { className: "login-about" }, h("button", { type: "button", className: "link", id: "login-about",
+    onclick: () => render(content(), h("div", { className: "public-page" }, aboutPage({ label: t("Voltar"), onclick: redraw }))) },
+  t("Sobre o Task Pulse"))));
   return form;
 }
 
