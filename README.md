@@ -1,7 +1,10 @@
 # Task Pulse
 
 Tracks the work done for companies and what it is worth, serverless on AWS. Each **company** has
-**projects**; each project has **pricing rules** (by the hour, with an optional flat last hour, or a
+**projects**. The well-known companies of AI training work (Alignerr, Outlier, Mercor…) are **standard
+companies**: the same for everyone who chooses them and never edited, so reports can put the work for
+them together; the others each person registers. Each project has as many **deadlines** (packages) as
+needed: every week on a weekday, every month on a day, or on one day; and **pricing rules** (by the hour, with an optional flat last hour, or a
 fixed amount per task; whether only approved tasks are paid; a bonus by approved tasks in the period),
 each valid from a moment until another one starts. Each project has **tasks** (external id, name,
 repository, description, start, time worked, finish). The **billing** page takes a company, a project
@@ -17,7 +20,7 @@ Made for the phone first: one column, the menu at the bottom, every button big e
 
 | Tarefas | Faturamento | Empresa | Projeto e regras |
 |---|---|---|---|
-| ![Open tasks as cards: time worked, + Tempo and Concluir](docs/screenshots/phone-tasks.png) | ![Billing: what should be received, the tasks with a box to untick the ones that won't be paid, and the form to register what was received](docs/screenshots/phone-billing.png) | ![A company's page with its projects and Novo projeto](docs/screenshots/phone-company.png) | ![A project with its pricing rule in force: hourly rate, flat last hour, only approved tasks paid, bonus tiers](docs/screenshots/phone-project.png) |
+| ![Open tasks as cards: time worked, + Tempo and Concluir](docs/screenshots/phone-tasks.png) | ![Billing: what should be received, the tasks with a box to untick the ones that won't be paid, and the form to register what was received](docs/screenshots/phone-billing.png) | ![A company's page with its projects and Novo projeto](docs/screenshots/phone-company.png) | ![A project with its deadlines (weekly, monthly, on a day, each with its next date) and its pricing rule in force](docs/screenshots/phone-project.png) |
 
 <p>
   <img src="docs/screenshots/phone-companies.png" width="24%" alt="Empresas: the companies registered and the well-known ones, added with one tap">
@@ -105,6 +108,7 @@ frontend/
   src/screens/companies.ts Empresas: the companies, and each company's page with all its projects
   src/screens/known-companies.ts the well-known companies, one tap to add (and suggested in Nova empresa)
   src/screens/projects.ts  Projetos: every project (filter by company), a project's page and its pricing rules
+  src/screens/deadlines.ts a project's deadlines: weekly, monthly or on a day, and the next day of each
   src/screens/billing.ts   Faturamento: a project's period, untick what won't be paid, register what was received
   src/screens/payments.ts  Pagamentos: every payment, should receive x received
   src/screens/settings.ts  Configurações (apart from the menu): language, name, password
@@ -122,13 +126,14 @@ everything else lives in a shared core, copied into every Lambda's zip.
 ```
 backend/
   core/pulse_core/
-    domain/models.py   Company, Project and its Rules, Task, Payment, and their validation
+    domain/models.py   Company, Project and its Rules and Deadlines, Task, Payment, and their validation
+    domain/catalog.py  the standard companies: a fixed id, name and notes, the same for everyone
     domain/pricing.py  what a task is worth by its rule; the period's bonus
     ports.py           what use cases need: the Repository
     application.py     rules shared by several use cases (clock, lookups, the billing of a period)
     i18n.py            the API's error messages in Portuguese (Accept-Language: pt-BR); English otherwise
     adapters/          DynamoDB, API Gateway input (login, ids, errors)
-  lambdas/<action>/    list_companies, create_company, update_company, delete_company,
+  lambdas/<action>/    list_companies, list_known_companies, create_company, update_company, delete_company,
                        list_projects, get_project, create_project, update_project, delete_project,
                        create_rule, update_rule, delete_rule,
                        list_tasks, create_task, update_task, delete_task, add_task_time,
@@ -140,8 +145,9 @@ backend/
 
 | Route | What it does |
 |---|---|
-| `GET /companies` · `POST /companies` · `PUT` · `DELETE /companies/{id}` | the companies (names unique ignoring case; one with projects can't be deleted) |
-| `GET /projects?company_id=` · `GET /projects/{id}` | the projects, with their company, rules and the rule in force now |
+| `GET /companies` · `POST /companies` · `PUT` · `DELETE /companies/{id}` | the user's companies (names unique ignoring case; one with projects can't be deleted). `POST {"known_id": "alignerr"}` (or a standard company's name) adds a standard company; `PUT` on one is refused |
+| `GET /companies/known` | the standard companies (domain/catalog.py) |
+| `GET /projects?company_id=` · `GET /projects/{id}` | the projects, with their company, rules, the rule in force now, each deadline's next day (`next_on`) and the nearest (`next_deadline`) |
 | `POST /projects` · `PUT` · `DELETE /projects/{id}` | register (optionally with its first rule, `rule`), change, delete a project (with its tasks and payments) |
 | `POST /projects/{id}/rules` · `PUT` · `DELETE /projects/{id}/rules/{rule_id}` | the pricing rules |
 | `GET /tasks?company_id=&project_id=&from=&to=&state=` | `open` (default): DOING tasks started up to the end of the period; `finished`: concluded in it; `all` |
@@ -181,6 +187,13 @@ Rules worth knowing:
   deleted; deleting the payment opens its tasks again. Should receive = paid tasks + bonus; the
   difference is received − should receive.
 - An external id is unique per project (ignoring case); blank is allowed for any number of tasks.
+- A standard company is kept in the user's data only as the choice (`COMPANY#alignerr`, `known` true);
+  its name and notes always come from `domain/catalog.py`, so every project of it, whoever registered
+  it, has the same `company_id`. A company registered by hand with a standard name (before the catalog)
+  is adopted the next time the companies are listed: its projects move to the standard one.
+- A project's `deadlines` (at most 20) are a list of maps inside it: `kind` `date` (`on`), `weekly`
+  (`weekday`, 1 = Monday) or `monthly` (`month_day`; a shorter month uses its last day). A project saved
+  with the old single `deadline` reads as one `date` deadline.
 - DynamoDB, single-table design: `PK = OWNER#<user>`, `SK = COMPANY#<id>`, `PROJECT#<id>` (rules
   inside, as a list), `TASK#<project id>#<id>`, `PAY#<project id>#<id>`. Every field is its own attribute
   in DynamoDB's types (`name` S, `minutes` and `*_cents` N, `paid_only_if_approved` BOOL, `time_log` and

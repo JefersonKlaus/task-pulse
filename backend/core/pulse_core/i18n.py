@@ -18,6 +18,7 @@ LABELS = {
     "Data do recebimento": "Date received", "Valor recebido": "Amount received", "Empresa": "Company",
     "Tipo de valor": "Pricing type", "Tarefa concluída": "Finished task", "Tarefa já faturada": "Task already billed",
     "finish": "finish", "paid_only_if_approved": "paid_only_if_approved",
+    "Prazos": "Deadlines", "Nome do prazo": "Deadline name", "Data do prazo": "Deadline date",
 }
 
 MESSAGES = {
@@ -34,6 +35,10 @@ MESSAGES = {
     "pagamento não encontrado": "payment not found",
     "regra não encontrada": "rule not found",
     "Já existe uma empresa com este nome": "A company with this name already exists",
+    "Empresa padrão não encontrada": "Standard company not found",
+    "Empresa padrão: não pode ser editada": "Standard company: it can't be edited",
+    "Este nome é de uma empresa padrão: adicione-a em Empresas conhecidas":
+        "This name is a standard company's: add it from Well-known companies",
     "Já existe uma tarefa com este ID externo neste projeto": "A task with this external ID already exists in this project",
     "O fim do período deve ser depois do início": "The period's end must be after its start",
     "Nenhuma tarefa em aberto neste período": "No open tasks in this period",
@@ -75,6 +80,9 @@ MESSAGES = {
     "o tempo não muda mais": "its time can't change any more",
     "informe quantos minutos trabalhou": "enter how many minutes you worked",
     "total grande demais": "total too large",
+    "escolha data, semanal ou mensal": "choose a date, weekly or monthly",
+    "dia da semana inválido": "invalid weekday",
+    "dia do mês inválido": "invalid day of the month",
 }
 
 PATTERNS = [            # messages with a number or a date inside
@@ -82,6 +90,7 @@ PATTERNS = [            # messages with a number or a date inside
     (re.compile(r"^Período de no máximo (\d+) dias$"), "A period of at most {0} days"),
     (re.compile(r"^Limite de (\d+) empresas$"), "Limit of {0} companies"),
     (re.compile(r"^Limite de (\d+) projetos$"), "Limit of {0} projects"),
+    (re.compile(r"^Limite de (\d+) prazos por projeto$"), "Limit of {0} deadlines per project"),
     (re.compile(r"^Limite de (\d+) regras por projeto$"), "Limit of {0} rules per project"),
     (re.compile(r"^Limite de (\d+) tarefas por projeto$"), "Limit of {0} tasks per project"),
     (re.compile(r"^Já há tarefa concluída nesta regra em (\S+): o fim deve ser depois disso$"),

@@ -5,13 +5,13 @@ from __future__ import annotations
 from collections import Counter
 from typing import Any, Mapping
 
-from pulse_core.application import now, project_view
+from pulse_core.application import companies as user_companies, now, project_view
 from pulse_core.domain.models import DOING
 from pulse_core.ports import Dependencies
 
 
 def list_projects(deps: Dependencies, owner: str, query: Mapping[str, str]) -> list[dict[str, Any]]:
-    companies = {c.id: c for c in deps.repo.list_companies(owner)}
+    companies = {c.id: c for c in user_companies(deps, owner)}
     wanted = query.get("company_id")
     open_tasks = Counter(t.project_id for t in deps.repo.list_tasks(owner) if t.status == DOING)
     at = now()
