@@ -16,7 +16,7 @@ def task(status="APPROVED", minutes=300, finished_at="2026-11-10T10:00", id="t")
     ("APPROVED", 300, 46000),      # 4h x 90 + the last hour x 100
     ("APPROVED", 30, 5000),        # under an hour: all of it at the flat
     ("DONE", 300, 45000),          # not approved: no flat
-    ("REJECTED", 300, 0),          # rejected: never paid
+    ("REJECTED", 300, 45000),      # rejected: paid by the hour, no flat
     ("DOING", 300, 0),             # not concluded: nothing yet
     ("APPROVED", 61, 10150),       # 1 min x 90 + 60 min x 100 = 101,50
 ])
@@ -33,6 +33,7 @@ def test_hourly_without_flat_and_rounding():
 def test_paid_only_if_approved():
     rule = Rule.from_input(hourly(paid_only_if_approved=True))
     assert task_value(task("DONE"), rule) == 0
+    assert task_value(task("REJECTED"), rule) == 0
     assert task_value(task("APPROVED"), rule) == 45000
 
 
@@ -40,8 +41,9 @@ def test_fixed_per_task_whatever_the_time():
     rule = Rule.from_input(fixed())
     assert task_value(task("DONE", 5), rule) == 35000
     assert task_value(task("APPROVED", 900), rule) == 35000
-    assert task_value(task("REJECTED"), rule) == 0
+    assert task_value(task("REJECTED"), rule) == 35000                    # rejected ones are paid too
     assert task_value(task("DONE"), Rule.from_input(fixed(paid_only_if_approved=True))) == 0
+    assert task_value(task("REJECTED"), Rule.from_input(fixed(paid_only_if_approved=True))) == 0
 
 
 def test_no_rule_is_worth_nothing():
@@ -54,6 +56,7 @@ def test_bonus_highest_tier_by_approved_tasks_of_the_rule_in_force():
     project = Project("p", "c", "P", rules=(rule,))
     assert bonus(project, [task(id="a")])[0] == 0
     assert bonus(project, [task(id="a"), task(id="b"), task("DONE", id="c")])[0] == 1000
+    assert bonus(project, [task(id="a"), task("REJECTED", id="b")])[0] == 0      # only approved ones count
     assert bonus(project, [task(id=str(i)) for i in range(5)])[0] == 9000
 
 

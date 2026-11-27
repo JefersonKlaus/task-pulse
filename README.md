@@ -8,7 +8,8 @@ needed: every week on a weekday, every month on a day, or on one day; and **pric
 fixed amount per task; whether only approved tasks are paid; a bonus by approved tasks in the period),
 each valid from a moment until another one starts. Each project has **tasks** (external id, name,
 repository, description, start, time worked, finish). The **billing** page takes a company, a project
-and a period, lists every task concluded in it with its value, lets you untick the ones that will
+and a period (a month, a week from Monday to Sunday, or a custom range for companies whose week starts
+on another day), lists every task concluded in it with its value, lets you untick the ones that will
 **not** be paid and register what was received; the app then shows what was paid, what wasn't, what
 should have been received and what was received.
 
@@ -103,7 +104,7 @@ frontend/
   src/config.ts         where the API is (public/js/config.js is written by the deploy)
   src/types.ts          what the API answers
   src/util.ts           DOM helpers, money (cents), time (minutes), dates, dialogs
-  src/screens/filters.ts   company / project / period (month or week) shared by every page
+  src/screens/filters.ts   company / project / period (month, week Monday-Sunday, or custom: any first and last day) shared by every page
   src/screens/tasks.ts     Tarefas: open tasks by period, + Tempo, Concluir, Aprovar / Rejeitar
   src/screens/companies.ts Empresas: the companies, and each company's page with all its projects
   src/screens/known-companies.ts the well-known companies, one tap to add (and suggested in Nova empresa)
@@ -176,8 +177,9 @@ Rules worth knowing:
   to before that task): to change a value, create a new rule from now on.
 - **Value of a task**: hourly, every minute at the hourly rate; with a flat rate, an **approved** task has
   its last hour (all of it, if under an hour) at the flat rate instead: 5h at 90 with a 100 flat =
-  4 x 90 + 1 x 100 = 460. Fixed: the fixed amount per task, whatever the time. `REJECTED` is worth 0;
-  with "só paga tarefa aprovada", `DONE` is worth 0 too until it is approved. Rounded to the cent, half up.
+  4 x 90 + 1 x 100 = 460. Fixed: the fixed amount per task, whatever the time. Every concluded task is
+  paid, `REJECTED` too (by the hour, never the flat); with "só paga tarefa aprovada", only `APPROVED` is
+  paid (`DONE` and `REJECTED` are worth 0). Rounded to the cent, half up.
 - **Bonus**: per billed period, by how many tasks were approved in it; the rule in force when the last of
   them was finished says the tiers, and the highest tier reached is paid (once: a later payment in the
   same period only takes what is still due).
