@@ -1,20 +1,21 @@
-// The system's languages: Portuguese (Brazil), its first language, and English. The texts are written in
+// The system's languages: English, the default, and Portuguese (Brazil). The texts are written in
 // Portuguese in the code, each wrapped in t(); EN below says each one in English ({name} = a value).
 // N_() only marks a text to be translated later (with t) where it is defined, like the menu names.
 // local/tests/test_frontend_i18n.py checks that every text has its English.
 export type Lang = "pt-BR" | "en";
-export const LANGUAGES: [Lang, string][] = [["pt-BR", "Português (Brasil)"], ["en", "English"]];
+export const LANGUAGES: [Lang, string][] = [["en", "English"], ["pt-BR", "Português (Brasil)"]];
 const STORAGE_KEY = "pulse.lang";
 
 export const isLang = (value: unknown): value is Lang => value === "pt-BR" || value === "en";
 
-/** This browser's choice; the first time, the browser's own language (English if it is English). */
+/** This browser's choice (on the login screen or in Configurações); English until one is made. Once logged in,
+ * the language saved in the login wins (app.ts). */
 function initial(): Lang {
   try {
     const saved = localStorage.getItem(STORAGE_KEY);
     if (isLang(saved)) return saved;
   } catch { /* no storage */ }
-  return /^en\b/i.test(navigator.language || "") ? "en" : "pt-BR";
+  return "en";
 }
 
 let current: Lang = initial();

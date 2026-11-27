@@ -90,9 +90,9 @@ PATTERNS = [            # messages with a number or a date inside
 
 
 def language(accept_language: str | None) -> str:
-    """"en", "en-US,en;q=0.9" -> "en"; anything else (or nothing) -> "pt-BR"."""
+    """"pt-BR", "pt-BR,pt;q=0.9" -> "pt-BR"; anything else (or nothing) -> "en", the default."""
     first = (accept_language or "").split(",")[0].strip().lower()
-    return "en" if first.startswith("en") else "pt-BR"
+    return "pt-BR" if first.startswith("pt") else "en"
 
 
 def _part(text: str) -> str:
