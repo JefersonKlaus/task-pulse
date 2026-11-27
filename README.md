@@ -9,7 +9,7 @@ and a period, lists every task concluded in it with its value, lets you untick t
 **not** be paid and register what was received; the app then shows what was paid, what wasn't, what
 should have been received and what was received.
 
-The app speaks **Portuguese (Brazil) and English**: each person chooses in *Configurações / Settings*. Code and docs are in English.
+The app speaks **English** (the default) **and Portuguese (Brazil)**: each person chooses on the login screen or in *Settings / Configurações*. Code and docs are in English; the pictures below show the app in Portuguese.
 
 ## What it looks like
 
@@ -126,7 +126,7 @@ backend/
     domain/pricing.py  what a task is worth by its rule; the period's bonus
     ports.py           what use cases need: the Repository
     application.py     rules shared by several use cases (clock, lookups, the billing of a period)
-    i18n.py            the API's error messages in English (Accept-Language: en)
+    i18n.py            the API's error messages in Portuguese (Accept-Language: pt-BR); English otherwise
     adapters/          DynamoDB, API Gateway input (login, ids, errors)
   lambdas/<action>/    list_companies, create_company, update_company, delete_company,
                        list_projects, get_project, create_project, update_project, delete_project,
@@ -246,8 +246,8 @@ Every text is written in Portuguese in the code and translated where it is shown
 [frontend/src/i18n.ts](frontend/src/i18n.ts) has the English of each screen's text, and
 [backend/core/pulse_core/i18n.py](backend/core/pulse_core/i18n.py) the English of each API error (the site
 sends `Accept-Language`). Money, numbers and dates follow the language too (R$ 1.234,56 · 20/11/2026 or
-R$1,234.56 · 11/20/2026). The first time, the app takes the browser's language; the choice is kept in the
-browser and in the login (Cognito's `locale`), so it follows the person to another device. Tests fail if a
+R$1,234.56 · 11/20/2026). English is the default until the person chooses (on the login screen or in
+Settings); the choice is kept in the browser and in the login (Cognito's `locale`), so it follows the person to another device. Tests fail if a
 text has no English (`local/tests/test_frontend_i18n.py`, `local/tests/test_i18n.py`). To add a text, wrap
 it in `t("...")` and add its English to `EN`.
 
