@@ -265,7 +265,7 @@ def run():
         expect(page.locator("#payments-totals")).to_contain_text("não pagas: R$ 112,50")
 
         # Configurações: apart from the menu. Name, password, then the language (saved in the login too)
-        page.click("#side-account .settings-link")
+        page.click("#side-account .settings-link:not(.about-link)")
         expect(page.locator("h1")).to_have_text("Configurações")
         expect(page.locator("nav [aria-current=page]")).to_have_count(0)
         expect(page.locator("#set-email")).to_have_value("ana@exemplo.com")
@@ -327,7 +327,13 @@ def run_without_login():
         expect(page.locator("#known-companies [data-known='Outlier']")).to_be_visible()
         page.click("nav >> text=Projetos")
         expect(page.locator("#project-list [data-project]")).to_have_count(3)
-        page.click("#top-bar .settings-link")                                      # Configurações, on a phone
+        page.click("#top-bar .about-link")                                         # Sobre: free, open source
+        expect(page.locator("#about h1")).to_have_text("Sobre o Task Pulse")
+        expect(page.locator("#about-github")).to_have_attribute("href", "https://github.com/JefersonKlaus/task-pulse")
+        expect(page.locator("#about-linkedin")).to_have_attribute("target", "_blank")
+        width = page.evaluate("document.documentElement.scrollWidth")
+        assert width <= 390, f"the page scrolls sideways on a phone ({width}px)"
+        page.click("#top-bar .settings-link:not(.about-link)")                     # Configurações, on a phone
         expect(page.locator("#settings-local")).to_be_visible()                      # no name or password here
         page.click("#settings-language >> text=English")
         expect(page.locator("nav")).to_contain_text("Projects")

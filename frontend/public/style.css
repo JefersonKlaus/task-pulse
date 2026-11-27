@@ -42,8 +42,10 @@ body:not(.signed-in) { background: var(--ink); }
 #top-bar { position: sticky; top: 0; z-index: 10; display: flex; align-items: center; justify-content: space-between;
   gap: 8px; padding: calc(8px + env(safe-area-inset-top)) 16px 8px; background: var(--ink); color: var(--on-ink); }
 #top-bar[hidden], #sidebar[hidden] { display: none; }
-.brand { display: flex; align-items: center; gap: 8px; font: 700 18px/1 var(--display); color: var(--on-ink); }
-.account { display: flex; align-items: center; gap: 8px; }
+.brand { display: flex; align-items: center; gap: 8px; font: 700 18px/1 var(--display); color: var(--on-ink);
+  white-space: nowrap; }
+.account { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.account > button { flex-shrink: 0; }
 .account .logout, .account .settings-link { display: flex; align-items: center; justify-content: center; gap: 8px;
   min-width: 44px; height: 44px; padding: 0 10px; border: 0; border-radius: 12px; background: var(--ink-2);
   color: var(--on-ink); font: 500 14px var(--font); cursor: pointer; }
@@ -55,9 +57,29 @@ body:not(.signed-in) { background: var(--ink); }
 .login-languages button { padding: 10px 4px; font-size: 14px; color: var(--muted); }
 .login-languages button[aria-pressed="true"] { color: var(--text); font-weight: 600; }
 .login-switch { margin: 16px 0 0; text-align: center; }
+.login-about { margin: 4px 0 0; text-align: center; }
+.login-about button { padding: 8px 4px; font-size: 14px; }
+
+/* ------------------------------------------------------------------ Sobre */
+/* opened from the login screen: a light sheet on the dark login background */
+.public-page { max-width: 720px; margin: 24px auto; padding: 20px 16px 24px; border-radius: 20px;
+  background: var(--background); color: var(--text); }
+.about { max-width: 720px; }
+.about-lead { margin: 0 0 16px; font-size: 1.05rem; color: var(--muted); }
+.about-card { display: flex; gap: 16px; align-items: flex-start; }
+.about-card h2 { margin: 0 0 6px; }
+.about-card p { margin: 0 0 10px; }
+.about-icon { flex-shrink: 0; display: grid; place-items: center; width: 44px; height: 44px; border-radius: 12px;
+  background: var(--brand-light); color: var(--brand-dark); font: 700 15px var(--display); }
+a.button { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; margin-top: 4px; padding: 0 16px;
+  border-radius: var(--radius-field); font-weight: 600; text-decoration: none; }
+a.button.secondary { color: var(--text); background: var(--surface); border: 1px solid var(--border-strong); }
+a.button.secondary:hover { border-color: var(--brand); color: var(--brand-dark); }
+a.button .icon-svg { width: 16px; height: 16px; }
 .field-hint { margin: 6px 0 0; font-size: .82rem; }
 #settings-email, #set-email:disabled { opacity: .75; }
 .local-mode { display: inline-flex; align-items: center; height: 30px; padding: 0 10px; border-radius: 999px;
+  min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   background: var(--ink-2); color: var(--on-ink-muted); font-size: 12px; font-weight: 500; }
 
 /* The menu: a bar fixed at the bottom, one icon + label per page. */

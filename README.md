@@ -113,6 +113,7 @@ frontend/
   src/screens/billing.ts   Faturamento: a project's period, untick what won't be paid, register what was received
   src/screens/payments.ts  Pagamentos: every payment, should receive x received
   src/screens/settings.ts  Configurações (apart from the menu): language, name, password
+  src/screens/about.ts     Sobre (apart from the menu, and on the login screen): free and open source, who made it, the repository
 ```
 
 The frontend doesn't know whether the backend is AWS or local: it calls `CONFIG.apiUrl`. The deploy

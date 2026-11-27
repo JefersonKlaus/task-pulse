@@ -1,9 +1,11 @@
 // The menu, once logged in. The screens before it (Entrar, Criar conta) are in screens/login.ts.
-// Configurações is apart from the menu: the gear in the top bar (phones) or at the foot of the sidebar.
+// Configurações and Sobre are apart from the menu: the gear and the "i" in the top bar (phones) or at the
+// foot of the sidebar.
 import { CONFIG } from "./config.js";
 import { getProfile, isSignedIn, signOut } from "./auth.js";
 import { N_, isLang, lang, setLang, t } from "./i18n.js";
 import { h, ICONS, icon, render } from "./util.js";
+import { aboutPage } from "./screens/about.js";
 import { mount as billing } from "./screens/billing.js";
 import { mount as companies } from "./screens/companies.js";
 import { loginScreen } from "./screens/login.js";
@@ -17,7 +19,7 @@ type Mount = (area: HTMLElement) => Promise<void>;
 const SCREENS: [string, Mount, keyof typeof ICONS][] = [            // [name in the menu, mount, icon]
   [N_("Tarefas"), tasks, "tasks"], [N_("Faturamento"), billing, "billing"], [N_("Pagamentos"), payments, "payments"],
   [N_("Projetos"), projects, "projects"], [N_("Empresas"), companies, "companies"]];
-const SETTINGS = -1;
+const SETTINGS = -1, ABOUT = -2;
 
 function start(page = 0): void {
   // Phones and tablets: the menu is a bar fixed at the bottom and the account sits in the top bar.
@@ -27,15 +29,18 @@ function start(page = 0): void {
 
   const buttons = SCREENS.map(([name, , iconName], i) =>
     h("button", { onclick: () => open(i) }, icon(iconName), h("span", {}, t(name))));
-  const settingsButtons: HTMLButtonElement[] = [];
+  const settingsButtons: HTMLButtonElement[] = [], aboutButtons: HTMLButtonElement[] = [];
   const open = (index: number) => {
-    buttons.forEach((b, i) => (i === index ? b.setAttribute("aria-current", "page") : b.removeAttribute("aria-current")));
-    settingsButtons.forEach((b) => (index === SETTINGS ? b.setAttribute("aria-current", "page")
-      : b.removeAttribute("aria-current")));
+    const mark = (list: HTMLButtonElement[], on: boolean) =>
+      list.forEach((b) => (on ? b.setAttribute("aria-current", "page") : b.removeAttribute("aria-current")));
+    buttons.forEach((b, i) => mark([b], i === index));
+    mark(settingsButtons, index === SETTINGS);
+    mark(aboutButtons, index === ABOUT);
     const area = h("div");
     render(content, area);
     window.scrollTo(0, 0);
     if (index === SETTINGS) void settings(area, () => start(SETTINGS));     // a new language redraws everything
+    else if (index === ABOUT) render(area, aboutPage());
     else void SCREENS[index]![1](area);
   };
   render(document.getElementById("menu")!, buttons);
@@ -44,7 +49,10 @@ function start(page = 0): void {
     const gear = h("button", { className: "settings-link", "aria-label": t("Configurações"), title: t("Configurações"),
       onclick: () => open(SETTINGS) }, icon("settings"), h("span", {}, t("Configurações")));
     settingsButtons.push(gear);
-    render(document.getElementById(place)!, gear, CONFIG.skipLogin
+    const about = h("button", { className: "settings-link about-link", "aria-label": t("Sobre"), title: t("Sobre"),
+      onclick: () => open(ABOUT) }, icon("about"), h("span", {}, t("Sobre")));
+    aboutButtons.push(about);
+    render(document.getElementById(place)!, gear, about, CONFIG.skipLogin
       ? h("span", { className: "local-mode" }, t("Modo local, sem login"))      // local server: nobody to log out
       : h("button", { className: "logout", "aria-label": t("Sair"), title: t("Sair"),
         onclick: () => { signOut(); location.reload(); } }, icon("logout"), h("span", {}, t("Sair"))));

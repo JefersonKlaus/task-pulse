@@ -71,6 +71,22 @@ const EN: Record<string, string> = {
   "Todos os projetos": "All projects",
   "Mês": "Month",
   "Semana": "Week",
+  "Sobre": "About",
+  "Sobre o Task Pulse": "About Task Pulse",
+  "O Task Pulse registra cada hora trabalhada e cada tarefa aprovada, e mostra quanto ela vale, quanto você deveria receber e quanto recebeu.":
+    "Task Pulse records every hour worked and every task approved, and shows what it is worth, what you should receive and what you received.",
+  "Gratuito e de código aberto": "Free and open source",
+  "É um projeto de código aberto, feito para ajudar todo mundo que trabalha por tarefa ou por hora.":
+    "It is an open source project, made to help everyone who works by the task or by the hour.",
+  "A intenção é que ele seja sempre gratuito, e vou fazer tudo o que puder para que continue assim.":
+    "It is meant to always be free, and I will do everything I can to keep it that way.",
+  "Quem fez": "Who made it",
+  "Desenvolvido por {name}.": "Developed by {name}.",
+  "LinkedIn": "LinkedIn",
+  "Rode na sua conta ou ajude o projeto": "Run it on your own account or help the project",
+  "Quer levantar o Task Pulse na sua própria conta da AWS, sugerir uma melhoria ou contribuir com código? O repositório tem tudo, com o passo a passo para publicar.":
+    "Want to run Task Pulse on your own AWS account, suggest an improvement or contribute code? The repository has everything, with the steps to deploy it.",
+  "Ver o código no GitHub": "See the code on GitHub",
   "Personalizado": "Custom",
   "De": "From",
   "Até": "To",

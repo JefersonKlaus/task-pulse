@@ -87,7 +87,7 @@ def run():
 
         portuguese(settings_page)
         settings_page.goto(url)
-        settings_page.click("#top-bar .settings-link")
+        settings_page.click("#top-bar .settings-link:not(.about-link)")
         expect(settings_page.locator("#settings-language")).to_be_visible()
         shoot(settings_page, "phone-settings")
 
