@@ -1,21 +1,30 @@
-// The filters every page shares: company, project and period (month or week, with ‹ › to move).
-// They are kept while the app is open, so going from Tarefas to Faturamento keeps the same choice.
+// The filters every page shares: company, project and period (month, week or a custom range, with ‹ › to
+// move). They are kept while the app is open, so going from Tarefas to Faturamento keeps the same choice.
+// Custom: any start and end day, for companies whose pay period is not Monday to Sunday (Sunday to
+// Saturday, two weeks...); ‹ › move it by its own length, so the next one starts the day after it ends.
 import type { Period } from "../api.js";
 import { locale, t } from "../i18n.js";
 import type { Company, Project } from "../types.js";
 import { addDays, h, today } from "../util.js";
 
-export type PeriodKind = "month" | "week";
+export type PeriodKind = "month" | "week" | "custom";
 
 export const state = {
   companyId: "",
   projectId: "",
   kind: "month" as PeriodKind,
-  anchor: today(),            // any day inside the period shown
+  anchor: today(),            // any day inside the period shown (month and week)
+  from: today(),              // custom: first and last day
+  to: today(),
 };
 
-/** The month or the week (Monday to Sunday) that contains `anchor`. */
+/** Days from `from` to `to`, both included. */
+const lengthOf = (from: string, to: string): number =>
+  Math.round((Date.parse(`${to}T12:00:00Z`) - Date.parse(`${from}T12:00:00Z`)) / 86_400_000) + 1;
+
+/** The month or the week (Monday to Sunday) that contains `anchor`; custom: the days chosen. */
 export function periodOf(kind: PeriodKind, anchor: string): Period {
+  if (kind === "custom") return { from: state.from, to: state.to };
   if (kind === "month") {
     const [y, m] = anchor.split("-").map(Number) as [number, number];
     const last = new Date(Date.UTC(y, m, 0)).getUTCDate();
@@ -40,7 +49,11 @@ export function periodLabel(kind: PeriodKind, anchor: string): string {
 export const currentPeriod = (): Period => periodOf(state.kind, state.anchor);
 
 function shift(direction: number): void {
-  if (state.kind === "week") state.anchor = addDays(state.anchor, 7 * direction);
+  if (state.kind === "custom") {
+    const days = lengthOf(state.from, state.to) * direction;
+    state.from = addDays(state.from, days);
+    state.to = addDays(state.to, days);
+  } else if (state.kind === "week") state.anchor = addDays(state.anchor, 7 * direction);
   else {
     const [y, m] = state.anchor.split("-").map(Number) as [number, number];
     const d = new Date(Date.UTC(y, m - 1 + direction, 1));
@@ -85,26 +98,57 @@ export function filterBar({ companies, projects, requireProject = false, showPer
   };
   drawProjects();
 
+  // custom: the first and the last day; changing one keeps the range valid (the end never before the start)
+  const from = h("input", { type: "date", id: "filter-from", required: true, onchange: () => {
+    if (!from.value) return;
+    state.from = from.value;
+    if (state.to < state.from) state.to = state.from;
+    draw();
+    onchange();
+  } });
+  const to = h("input", { type: "date", id: "filter-to", required: true, onchange: () => {
+    if (!to.value) return;
+    state.to = to.value;
+    if (state.to < state.from) state.from = state.to;
+    draw();
+    onchange();
+  } });
+  const custom = h("div", { className: "custom-period", id: "custom-period" },
+    h("div", {}, h("label", { htmlFor: "filter-from" }, t("De")), from),
+    h("div", {}, h("label", { htmlFor: "filter-to" }, t("Até")), to));
+
   const kind = h("select", { id: "filter-kind", onchange: () => {
+    if (kind.value === "custom" && state.kind !== "custom") {     // starts from the period on screen
+      ({ from: state.from, to: state.to } = currentPeriod());
+    }
     state.kind = kind.value as PeriodKind;
-    drawLabel();
+    draw();
     onchange();
   } }, h("option", { value: "month", selected: state.kind === "month" }, t("Mês")),
-  h("option", { value: "week", selected: state.kind === "week" }, t("Semana")));
+  h("option", { value: "week", selected: state.kind === "week" }, t("Semana")),
+  h("option", { value: "custom", selected: state.kind === "custom" }, t("Personalizado")));
   const label = h("strong", { id: "period-label", className: "period-label" });
-  const drawLabel = () => { label.textContent = periodLabel(state.kind, state.anchor); };
-  drawLabel();
-  const move = (direction: number) => () => { shift(direction); drawLabel(); onchange(); };
+  const todayButton = h("button", { className: "secondary small", onclick: () => {
+    state.anchor = today(); draw(); onchange();
+  } }, t("Hoje"));
+  const draw = () => {
+    label.textContent = periodLabel(state.kind, state.anchor);
+    custom.hidden = state.kind !== "custom";
+    todayButton.hidden = state.kind === "custom";     // a custom range moves with ‹ › or its two days
+    from.value = state.from;
+    to.value = state.to;
+  };
+  draw();
+  const move = (direction: number) => () => { shift(direction); draw(); onchange(); };
   const period = h("div", { className: "period" },
     h("button", { className: "secondary small", "aria-label": t("Período anterior"), onclick: move(-1) }, "‹"),
     kind,
     h("button", { className: "secondary small", "aria-label": t("Próximo período"), onclick: move(1) }, "›"),
-    h("button", { className: "secondary small", onclick: () => { state.anchor = today(); drawLabel(); onchange(); } },
-      t("Hoje")));
+    todayButton);
 
   return h("div", { className: "card" },
     h("div", { className: "filters" },
       h("div", {}, h("label", { htmlFor: "filter-company" }, t("Empresa")), company),
       h("div", {}, h("label", { htmlFor: "filter-project" }, t("Projeto")), project),
-      showPeriod && h("div", { className: "period-cell" }, h("label", {}, t("Período:"), " ", label), period)));
+      showPeriod && h("div", { className: "period-cell" }, h("label", {}, t("Período:"), " ", label), period, custom)));
 }
