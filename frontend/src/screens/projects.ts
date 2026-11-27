@@ -122,7 +122,7 @@ function drawProject(area: HTMLElement, project: Project, companies: Company[], 
               ? t("De {start} até {end}", { start: formatDate(rule.starts_at), end: formatDate(rule.ends_at) })
               : t("De {start} em diante", { start: formatDate(rule.starts_at) })),
             h("div", { className: "muted" }, rule.paid_only_if_approved ? t("Só tarefas aprovadas são pagas")
-              : t("Tarefas concluídas e aprovadas são pagas (rejeitadas não)")),
+              : t("Tarefas concluídas, aprovadas e rejeitadas são pagas")),
             rule.bonus_tiers.length > 0 && h("div", { className: "muted" }, t("Bônus:"), " ", rule.bonus_tiers.map((tier) =>
               t("{count}+ aprovadas = {amount}", { count: tier.min_tasks, amount: formatMoney(tier.bonus_cents, project.currency) }))
               .join(" · "))),

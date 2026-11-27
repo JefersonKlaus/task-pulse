@@ -154,7 +154,7 @@ class Rule:
       hour (or all of it, if under an hour) paid at `flat_cents`/h instead.
     - kind "fixed": `fixed_cents` per task, whatever the time.
     - `paid_only_if_approved`: only APPROVED tasks are paid (DONE and REJECTED are worth 0).
-      Without it, DONE and APPROVED are paid and only REJECTED is worth 0.
+      Without it, every concluded task is paid: DONE, APPROVED and REJECTED (only APPROVED gets the flat).
     - `bonus_tiers`: extra money once per billed period, by how many tasks were approved in it.
     """
     id: str

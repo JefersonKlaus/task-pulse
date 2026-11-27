@@ -176,8 +176,9 @@ Rules worth knowing:
   to before that task): to change a value, create a new rule from now on.
 - **Value of a task**: hourly, every minute at the hourly rate; with a flat rate, an **approved** task has
   its last hour (all of it, if under an hour) at the flat rate instead: 5h at 90 with a 100 flat =
-  4 x 90 + 1 x 100 = 460. Fixed: the fixed amount per task, whatever the time. `REJECTED` is worth 0;
-  with "só paga tarefa aprovada", `DONE` is worth 0 too until it is approved. Rounded to the cent, half up.
+  4 x 90 + 1 x 100 = 460. Fixed: the fixed amount per task, whatever the time. Every concluded task is
+  paid, `REJECTED` too (by the hour, never the flat); with "só paga tarefa aprovada", only `APPROVED` is
+  paid (`DONE` and `REJECTED` are worth 0). Rounded to the cent, half up.
 - **Bonus**: per billed period, by how many tasks were approved in it; the rule in force when the last of
   them was finished says the tiers, and the highest tier reached is paid (once: a later payment in the
   same period only takes what is still due).
