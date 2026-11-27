@@ -183,6 +183,7 @@ fieldset.choices legend { padding: 0; margin-bottom: 6px; font-size: .85rem; fon
 .chip { display: flex; align-items: center; gap: 10px; min-height: 46px; margin: 14px 0 0; padding: 0 12px;
   border: 1px solid var(--border-strong); border-radius: var(--radius-field); font-size: 15px; font-weight: 500; cursor: pointer; }
 .chip input { width: 20px; height: 20px; accent-color: var(--brand); }
+.known-list { display: flex; flex-wrap: wrap; gap: 8px; }
 
 /* ------------------------------------------------------------------ badges (status and billing) */
 .badge { display: inline-flex; align-items: center; gap: 6px; height: 24px; margin-left: 8px; padding: 0 10px;

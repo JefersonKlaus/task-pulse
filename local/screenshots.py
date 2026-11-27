@@ -44,6 +44,8 @@ def screens(page, prefix):
     shoot(page, f"{prefix}-billing", whole=True)
 
     go(page, "Empresas")
+    expect(page.locator("#known-companies")).to_be_visible()                     # the well-known ones, one tap away
+    shoot(page, f"{prefix}-companies", whole=True)
     page.locator("[data-company]").first.click()                                 # a company and its projects
     expect(page.locator("#company-projects")).to_be_visible()
     shoot(page, f"{prefix}-company")
