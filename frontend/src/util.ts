@@ -103,9 +103,17 @@ export function addDays(iso: string, days: number): string {
 
 // ------------------------------------------------------------------ widgets
 /** Runs an action with the button disabled, so repeated clicks don't send it twice. */
+/** While `action` runs the button is disabled and shows a spinner (style.css: [aria-busy]). */
 export async function whileDisabled<T>(button: HTMLButtonElement, action: () => Promise<T>): Promise<T> {
   button.disabled = true;
-  try { return await action(); } finally { button.disabled = false; }
+  button.setAttribute("aria-busy", "true");
+  try { return await action(); } finally { button.disabled = false; button.removeAttribute("aria-busy"); }
+}
+
+/** What a screen (or part of one) shows while its data loads: a spinner and "Carregando…". */
+export function loading(): HTMLElement {
+  return h("div", { className: "loading", role: "status" },
+    h("span", { className: "spinner", "aria-hidden": "true" }), h("span", {}, t("Carregando…")));
 }
 
 /** Opens a modal <dialog>. It is removed from the page when closed; clicking outside it closes it too. */
@@ -126,7 +134,7 @@ export function openDialog(title: string, ...children: Child[]): HTMLDialogEleme
 export function formDialog(title: string, fields: Child[], save: () => Promise<boolean | void>,
   submitText = t("Salvar")): HTMLDialogElement {
   const submit = h("button", { className: "primary", type: "submit" }, submitText);
-  const form = h("form", {}, fields, h("div", { className: "actions" }, submit,
+  const form = h("form", {}, h("div", { className: "dialog-body" }, fields), h("div", { className: "actions" }, submit,
     h("button", { className: "secondary", type: "button", onclick: () => dialog.close() }, t("Cancelar"))));
   const dialog = openDialog(title, form);
   form.addEventListener("submit", (e) => {

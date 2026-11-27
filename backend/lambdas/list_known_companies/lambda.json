@@ -1,0 +1,4 @@
+{
+  "route": "GET /companies/known",
+  "database": "read"
+}

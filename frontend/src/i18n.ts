@@ -1,20 +1,21 @@
-// The system's languages: Portuguese (Brazil), its first language, and English. The texts are written in
+// The system's languages: English, the default, and Portuguese (Brazil). The texts are written in
 // Portuguese in the code, each wrapped in t(); EN below says each one in English ({name} = a value).
 // N_() only marks a text to be translated later (with t) where it is defined, like the menu names.
 // local/tests/test_frontend_i18n.py checks that every text has its English.
 export type Lang = "pt-BR" | "en";
-export const LANGUAGES: [Lang, string][] = [["pt-BR", "Português (Brasil)"], ["en", "English"]];
+export const LANGUAGES: [Lang, string][] = [["en", "English"], ["pt-BR", "Português (Brasil)"]];
 const STORAGE_KEY = "pulse.lang";
 
 export const isLang = (value: unknown): value is Lang => value === "pt-BR" || value === "en";
 
-/** This browser's choice; the first time, the browser's own language (English if it is English). */
+/** This browser's choice (on the login screen or in Configurações); English until one is made. Once logged in,
+ * the language saved in the login wins (app.ts). */
 function initial(): Lang {
   try {
     const saved = localStorage.getItem(STORAGE_KEY);
     if (isLang(saved)) return saved;
   } catch { /* no storage */ }
-  return /^en\b/i.test(navigator.language || "") ? "en" : "pt-BR";
+  return "en";
 }
 
 let current: Lang = initial();
@@ -181,7 +182,6 @@ const EN: Record<string, string> = {
   "Empresa excluída.": "Company deleted.",
   "sem regra de valor em vigor": "no pricing rule in force",
   "{count} em aberto": "{count} open",
-  "Deadline {date}": "Deadline {date}",
   "Nova empresa": "New company",
   "Nenhuma empresa ainda": "No companies yet",
   "Editar empresa": "Edit company",
@@ -194,9 +194,43 @@ const EN: Record<string, string> = {
   "Todo projeto é de uma empresa. Cadastre a empresa primeiro.": "Every project belongs to a company. Add the company first.",
   "Uma empresa pode ter vários projetos, cada um com o seu valor.": "A company can have many projects, each with its own rate.",
   "Empresa salva.": "Company saved.",
+  "Toque para adicionar. São as mesmas para todos e não são editadas. As que não estão aqui, cadastre em Nova empresa.":
+    "Tap to add. They are the same for everyone and aren't edited. For the ones not listed here, use New company.",
+  "Padrão": "Standard",
+  "Remover \"{name}\" da sua lista?": "Remove \"{name}\" from your list?",
+  "Remover": "Remove",
+  "Empresa removida da sua lista.": "Company removed from your list.",
+  "Remover da minha lista": "Remove from my list",
+  "Empresa padrão: a mesma para todos que a usam, por isso não é editada.":
+    "Standard company: the same for everyone who uses it, so it isn't edited.",
+  "Esta é uma empresa padrão: será a mesma para todos e não poderá ser editada.":
+    "This is a standard company: it will be the same for everyone and can't be edited.",
+  "Toda semana": "Every week",
+  "Todo mês": "Every month",
+  "Num dia": "On a day",
+  "Toda semana, {weekday}": "Every week, {weekday}",
+  "Todo mês, dia {day}": "Every month, day {day}",
+  "Em {date}": "On {date}",
+  "Prazo {date}": "Due {date}",
+  "Prazos": "Deadlines",
+  "Editar prazos": "Edit deadlines",
+  "Prazo": "Deadline",
+  "passou": "passed",
+  "Sem prazos. Um projeto pode ter vários: por semana, por mês ou num dia.":
+    "No deadlines. A project can have many: weekly, monthly or on a day.",
+  "Nome (ex.: Pacote 1)": "Name (e.g. Package 1)",
+  "Nome do prazo": "Deadline name",
+  "Repete": "Repeats",
+  "Dia da semana": "Weekday",
+  "Dia do mês": "Day of the month",
+  "dia": "day",
+  "Data do prazo": "Deadline date",
+  "Remover prazo": "Remove deadline",
+  "Prazos (pacotes)": "Deadlines (packages)",
+  "Quantos precisar: toda semana, todo mês ou num dia. Os que repetem andam sozinhos.":
+    "As many as needed: every week, every month or on a day. The recurring ones move on by themselves.",
+  "+ Prazo": "+ Deadline",
   "Empresas conhecidas": "Well-known companies",
-  "Toque para adicionar. As que não estão aqui, cadastre em Nova empresa.":
-    "Tap to add. For the ones not listed here, use New company.",
   "{name} adicionada.": "{name} added.",
   "Plataforma da Labelbox.": "Run by Labelbox.",
   "Plataforma da Toloka.": "Run by Toloka.",
@@ -207,7 +241,6 @@ const EN: Record<string, string> = {
     "Delete the project \"{name}\" with all its tasks and payments?",
   "Projeto excluído.": "Project deleted.",
   "Moeda": "Currency",
-  "Deadline": "Deadline",
   "Regras de valor": "Pricing rules",
   "Nova regra": "New rule",
   "Cada tarefa vale pela regra em vigor quando foi concluída. Para mudar um valor, crie uma regra nova a partir de agora: a anterior termina quando a nova começa.":
@@ -226,7 +259,6 @@ const EN: Record<string, string> = {
     "No rule: this project's tasks are worth 0 until you create one.",
   "{amount} por tarefa": "{amount} per task",
   "última hora {amount}/h se aprovada": "last hour {amount}/h if approved",
-  "Deadline (quando acaba)": "Deadline (when it ends)",
   "Projeto salvo.": "Project saved.",
   "Editar regra": "Edit rule",
   "Regra salva.": "Rule saved.",

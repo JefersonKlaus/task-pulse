@@ -6,13 +6,13 @@ import { t } from "../i18n.js";
 import type { BillingReport, Company, Project, Task } from "../types.js";
 import { STATUS_LABELS } from "../types.js";
 import {
-  actionsMenu, centsToText, confirmAction, errorMessage, field, formatDate, formatMinutes, formatMoney, h, notify,
-  render, toCents, today, whileDisabled,
+  actionsMenu, centsToText, confirmAction, errorMessage, field, formatDate, formatMinutes, formatMoney, h, loading,
+  notify, render, toCents, today, whileDisabled,
 } from "../util.js";
 import { currentPeriod, filterBar, state } from "./filters.js";
 
 export async function mount(area: HTMLElement): Promise<void> {
-  render(area, h("p", { className: "notice" }, t("Carregando…")));
+  render(area, loading());
   let companies: Company[], projects: Project[];
   try { [companies, projects] = await Promise.all([api.companies.list(), api.projects.list()]); }
   catch (error) { return render(area, h("p", { className: "notice" }, errorMessage(error))); }
@@ -26,7 +26,7 @@ export async function mount(area: HTMLElement): Promise<void> {
 
   async function load(): Promise<void> {
     if (!state.projectId) return render(report, h("p", { className: "notice" }, t("Nenhum projeto nesta empresa.")));
-    render(report, h("p", { className: "notice" }, t("Carregando…")));
+    render(report, loading());
     try { draw(await api.billing.get(state.projectId, currentPeriod())); }
     catch (error) { render(report, h("p", { className: "notice" }, errorMessage(error))); }
   }

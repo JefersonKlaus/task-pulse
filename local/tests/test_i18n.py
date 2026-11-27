@@ -55,7 +55,8 @@ def test_messages_with_a_label_or_a_number(message, english):
 def test_language_from_the_header():
     assert language("en-US,en;q=0.9") == "en"
     assert language("pt-BR,pt;q=0.9,en;q=0.8") == "pt-BR"
-    assert language(None) == "pt-BR"
+    assert language(None) == "en"                     # English is the default
+    assert language("es-ES") == "en"
 
 
 def test_the_api_answers_in_the_requests_language():
@@ -69,4 +70,5 @@ def test_the_api_answers_in_the_requests_language():
         return response["statusCode"], json.loads(response["body"])
 
     assert create_company({"accept-language": "en-US,en;q=0.9"}) == (400, {"error": "Name: required"})
-    assert create_company({}) == (400, {"error": "Nome: obrigatório"})
+    assert create_company({"accept-language": "pt-BR"}) == (400, {"error": "Nome: obrigatório"})
+    assert create_company({}) == (400, {"error": "Name: required"})

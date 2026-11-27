@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import replace
 from typing import Any
 
-from pulse_core.application import now, project_or_404, project_view
+from pulse_core.application import company, now, project_or_404, project_view
 from pulse_core.domain.errors import Conflict, NotFound
 from pulse_core.ports import Dependencies
 
@@ -20,4 +20,4 @@ def delete_rule(deps: Dependencies, owner: str, project_id: str, rule_id: str) -
         raise Conflict("Há tarefas concluídas nesta regra: ela não pode ser excluída")
     project = replace(project, rules=tuple(r for r in project.rules if r.id != rule_id))
     deps.repo.save_project(owner, project)
-    return project_view(project, deps.repo.get_company(owner, project.company_id), now())
+    return project_view(project, company(deps, owner, project.company_id), now())

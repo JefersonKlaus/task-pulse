@@ -5,8 +5,8 @@ import { N_, t } from "../i18n.js";
 import type { Project, Status, Task } from "../types.js";
 import { STATUS_LABELS } from "../types.js";
 import {
-  actionsMenu, confirmAction, errorMessage, field, formDialog, formatDate, formatHours, formatMinutes,
-  formatMoney, h, notify, nowLocal, render, toMinutes, whileDisabled,
+  actionsMenu, confirmAction, errorMessage, field, formatDate, formatHours, formatMinutes, formatMoney, formDialog,
+  h, loading, notify, nowLocal, render, toMinutes, whileDisabled,
 } from "../util.js";
 import { currentPeriod, filterBar, state } from "./filters.js";
 
@@ -18,7 +18,7 @@ const TIME_HINT = () => t("1:30, 1,5 (horas) ou 45m");
 const BAD_TIME = () => t("Tempo inválido: use 1:30, 1,5 ou 45m.");
 
 export async function mount(area: HTMLElement): Promise<void> {
-  render(area, h("p", { className: "notice" }, t("Carregando…")));
+  render(area, loading());
   let projects: Project[];
   let companies;
   try {
@@ -40,7 +40,7 @@ export async function mount(area: HTMLElement): Promise<void> {
   }
 
   async function load(): Promise<void> {
-    render(list, h("p", { className: "notice" }, t("Carregando…")));
+    render(list, loading());
     try {
       const result = await api.tasks.list({ company_id: state.companyId, project_id: state.projectId,
         ...currentPeriod(), state: view });

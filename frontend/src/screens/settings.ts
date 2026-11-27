@@ -5,12 +5,12 @@
 import { changePassword, getProfile, updateProfile } from "../auth.js";
 import { CONFIG } from "../config.js";
 import { type Lang, LANGUAGES, lang, setLang, t } from "../i18n.js";
-import { errorMessage, h, notify, render, revealable, whileDisabled } from "../util.js";
+import { errorMessage, h, loading, notify, render, revealable, whileDisabled } from "../util.js";
 import { checkNewPassword } from "./login.js";
 
 /** `onLanguage`: redraws the whole app (menu included) in the new language, back on this page. */
 export async function mount(area: HTMLElement, onLanguage: () => void): Promise<void> {
-  render(area, h("p", { className: "notice" }, t("Carregando…")));
+  render(area, loading());
   const local = Boolean(CONFIG.skipLogin);
   let profile = { name: "", email: "", locale: "" };
   if (!local) {

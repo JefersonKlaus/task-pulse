@@ -6,6 +6,7 @@ from dataclasses import replace
 from datetime import datetime, timedelta, timezone
 from typing import Any, Iterable, Mapping, Optional
 
+from .domain.catalog import known_by_name, resolve
 from .domain.errors import NotFound, ValidationError
 from .domain.models import NOT_PAID, PAID, Company, Payment, Project, Task, cents, day, new_id, text
 from .domain.pricing import bonus, task_value
@@ -26,11 +27,40 @@ def today() -> str:
 
 
 # ------------------------------------------------------------------ lookups
+def companies(deps: Dependencies, owner: str) -> list[Company]:
+    """The user's companies as they are shown: a well-known one with the catalog's name and notes."""
+    return [resolve(c) for c in deps.repo.list_companies(owner)]
+
+
+def company(deps: Dependencies, owner: str, id: Optional[str]) -> Optional[Company]:
+    found = deps.repo.get_company(owner, id) if id else None
+    return resolve(found) if found else None
+
+
 def company_or_404(deps: Dependencies, owner: str, id: Optional[str]) -> Company:
-    company = deps.repo.get_company(owner, id) if id else None
-    if company is None:
+    found = company(deps, owner, id)
+    if found is None:
         raise NotFound("empresa não encontrada")
-    return company
+    return found
+
+
+def adopt_known_companies(deps: Dependencies, owner: str) -> None:
+    """A company the user registered by hand with the name of a well-known one (before they existed)
+    becomes the well-known one: its projects move to it and the hand-made record goes. Runs when the
+    companies are listed, and does nothing once there is nothing left to adopt."""
+    mine = deps.repo.list_companies(owner)
+    chosen = {c.id for c in mine if c.known}
+    for own in [c for c in mine if not c.known]:
+        known = known_by_name(own.name)
+        if known is None:
+            continue
+        if known.id not in chosen:
+            deps.repo.save_company(owner, known)
+            chosen.add(known.id)
+        for project in deps.repo.list_projects(owner):
+            if project.company_id == own.id:
+                deps.repo.save_project(owner, replace(project, company_id=known.id))
+        deps.repo.delete_company(owner, own.id)
 
 
 def project_or_404(deps: Dependencies, owner: str, id: Optional[str]) -> Project:
@@ -48,7 +78,7 @@ def task_or_404(deps: Dependencies, owner: str, project_id: str, id: Optional[st
 
 
 def check_unique_company_name(deps: Dependencies, owner: str, company: Company) -> None:
-    for other in deps.repo.list_companies(owner):
+    for other in companies(deps, owner):
         if other.id != company.id and other.name.casefold() == company.name.casefold():
             raise ValidationError("Já existe uma empresa com este nome")
 
@@ -73,9 +103,16 @@ def period(query: Mapping[str, str], start_key: str = "from", end_key: str = "to
 
 # ------------------------------------------------------------------ what the screens receive
 def project_view(project: Project, company: Optional[Company], at: str) -> dict[str, Any]:
+    """The project with its company's name, the rule in force at `at`, and each deadline with its next
+    day from `at` (`next_on`; None for a day that has passed) plus the nearest one (`next_deadline`)."""
     rule = project.rule_at(at)
+    today_ = at[:10]
+    nearest = project.next_deadline(today_)
     return {**project.to_dict(), "company_name": company.name if company else "",
-            "current_rule_id": rule.id if rule else None}
+            "company_known": bool(company and company.known),
+            "current_rule_id": rule.id if rule else None,
+            "deadlines": [{**d.to_dict(), "next_on": d.next_on(today_)} for d in project.deadlines],
+            "next_deadline": {**nearest[1].to_dict(), "next_on": nearest[0]} if nearest else None}
 
 
 def task_view(task: Task, project: Project, payments: Mapping[str, Payment] = {}) -> dict[str, Any]:

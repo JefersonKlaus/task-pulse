@@ -1,5 +1,6 @@
-"""Demo data for the local server, always dated around today: two companies, three projects (hourly with
-a flat last hour and a bonus, hourly whose rate changed last week, fixed per task) and their tasks, some
+"""Demo data for the local server, always dated around today: two companies (a well-known one and one of the
+user's own), three projects (hourly with a flat last hour, a bonus and three deadlines: weekly, monthly and
+a day; hourly whose rate changed last week; fixed per task) and their tasks, some
 open, some concluded, some already paid. Goes through the same use cases as the API."""
 from __future__ import annotations
 
@@ -18,12 +19,14 @@ def seed(deps: Dependencies, owner: str, today: date) -> None:
         return f"{(today - timedelta(days=days_ago)).isoformat()}T{hour:02d}:00"
 
     start = at(120, 0)
-    acme = create_company(deps, owner, {"name": "Alignerr"})
+    acme = create_company(deps, owner, {"known_id": "alignerr"})            # a well-known company
     etho = create_company(deps, owner, {"name": "Etho"})
 
     review = create_project(deps, owner, {
         "company_id": acme["id"], "name": "Code review", "currency": "USD",
-        "deadline": (today + timedelta(days=60)).isoformat(),
+        "deadlines": [{"kind": "weekly", "label": "Pacote semanal", "weekday": 5},
+                      {"kind": "monthly", "label": "Fechamento do mês", "month_day": 30},
+                      {"kind": "date", "label": "Entrega final", "on": (today + timedelta(days=60)).isoformat()}],
         "rule": {"kind": "hourly", "starts_at": start, "hourly_cents": 9000, "flat_cents": 10000,
                  "paid_only_if_approved": True,
                  "bonus_tiers": [{"min_tasks": 3, "bonus_cents": 5000}, {"min_tasks": 6, "bonus_cents": 15000}]}})

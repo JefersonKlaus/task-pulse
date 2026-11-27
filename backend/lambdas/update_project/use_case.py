@@ -1,4 +1,4 @@
-"""Use case (application layer): Changes a project's name, company, currency, deadline or description (the rules change on their own routes).
+"""Use case (application layer): Changes a project's name, company, currency, deadlines or description (the rules change on their own routes).
 Depends only on the core's domain and ports, never on AWS."""
 from __future__ import annotations
 

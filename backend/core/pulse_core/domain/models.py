@@ -1,4 +1,4 @@
-"""Entities and their validation: Company, Project (with its pricing Rules), Task and Payment.
+"""Entities and their validation: Company, Project (with its pricing Rules and Deadlines), Task and Payment.
 
 Conventions:
 - Money is always integer cents (`hourly_cents`, `received_cents`...), never a float.
@@ -11,7 +11,8 @@ from __future__ import annotations
 import re
 import uuid
 from dataclasses import dataclass, field, replace
-from datetime import date, datetime
+import calendar
+from datetime import date, datetime, timedelta
 from typing import Any, Mapping, Optional
 
 from .errors import ValidationError
@@ -109,10 +110,15 @@ def flag(payload: Mapping[str, Any], key: str, default: bool = False) -> bool:
 # ------------------------------------------------------------------ company
 @dataclass(frozen=True)
 class Company:
-    """A company the work is done for. Its projects, tasks and payments are kept apart from the others'."""
+    """A company the work is done for. Its projects, tasks and payments are kept apart from the others'.
+
+    `known`: one of the well-known companies (domain/catalog.py). Its id, name and notes are the same for
+    everyone who chose it and nobody edits them; what each person keeps is only the choice. That is what
+    lets the projects of the same company be put together across people (reports)."""
     id: str
     name: str
     notes: str = ""
+    known: bool = False
 
     @classmethod
     def from_input(cls, payload: Mapping[str, Any], id: Optional[str] = None) -> "Company":
@@ -120,11 +126,11 @@ class Company:
                    text(payload, "notes", "Observações", max_length=2000))
 
     def to_dict(self) -> dict[str, Any]:
-        return {"id": self.id, "name": self.name, "notes": self.notes}
+        return {"id": self.id, "name": self.name, "notes": self.notes, "known": self.known}
 
     @classmethod
     def from_dict(cls, d: Mapping[str, Any]) -> "Company":
-        return cls(d["id"], d["name"], d.get("notes", ""))
+        return cls(d["id"], d["name"], d.get("notes", ""), bool(d.get("known", False)))
 
 
 # ------------------------------------------------------------------ pricing rules
@@ -219,6 +225,85 @@ class Rule:
                    tuple(BonusTier(t["min_tasks"], t["bonus_cents"]) for t in d.get("bonus_tiers", [])))
 
 
+# ------------------------------------------------------------------ deadlines
+DEADLINE_KINDS = ("date", "weekly", "monthly")
+MAX_DEADLINES = 20
+
+
+@dataclass(frozen=True)
+class Deadline:
+    """A deadline of the project (a package to deliver): on one day ("date"), every week on a weekday
+    ("weekly", 1 = Monday ... 7 = Sunday) or every month on a day ("monthly", 1-31; a shorter month uses
+    its last day). The recurring ones move on by themselves: `next_on` is the next one from a day."""
+    id: str
+    kind: str
+    label: str = ""
+    on: Optional[str] = None                # "date": the day
+    weekday: Optional[int] = None           # "weekly"
+    month_day: Optional[int] = None         # "monthly"
+
+    @classmethod
+    def from_input(cls, payload: Any) -> "Deadline":
+        if not isinstance(payload, Mapping):
+            raise ValidationError("Prazos: item inválido")
+        kind = payload.get("kind")
+        if kind not in DEADLINE_KINDS:
+            raise ValidationError("Prazos: escolha data, semanal ou mensal")
+        id = payload.get("id")
+        id = id if isinstance(id, str) and ITEM_ID_RE.match(id) else new_id()
+        label = text(payload, "label", "Nome do prazo", max_length=80)
+        if kind == "date":
+            return cls(id, kind, label, on=day(payload.get("on"), "Data do prazo"))
+        if kind == "weekly":
+            return cls(id, kind, label, weekday=_whole(payload.get("weekday"), 1, 7, "Prazos: dia da semana inválido"))
+        return cls(id, kind, label, month_day=_whole(payload.get("month_day"), 1, 31, "Prazos: dia do mês inválido"))
+
+    def next_on(self, today: str) -> Optional[str]:
+        """The next day of this deadline from `today` (today included); None for a day that has passed."""
+        if self.kind == "date":
+            return self.on if self.on and self.on >= today else None
+        start = date.fromisoformat(today)
+        if self.kind == "weekly":
+            return (start + timedelta(days=((self.weekday or 1) - start.isoweekday()) % 7)).isoformat()
+        year, month = start.year, start.month
+        for _ in range(2):
+            last = calendar.monthrange(year, month)[1]
+            candidate = date(year, month, min(self.month_day or 1, last))
+            if candidate >= start:
+                return candidate.isoformat()
+            year, month = (year + 1, 1) if month == 12 else (year, month + 1)
+        return None                         # never: next month always has the day
+
+    def to_dict(self) -> dict[str, Any]:
+        return {"id": self.id, "kind": self.kind, "label": self.label, "on": self.on, "weekday": self.weekday,
+                "month_day": self.month_day}
+
+    @classmethod
+    def from_dict(cls, d: Mapping[str, Any]) -> "Deadline":
+        return cls(d["id"], d["kind"], d.get("label", ""), d.get("on"),
+                   int(d["weekday"]) if d.get("weekday") is not None else None,
+                   int(d["month_day"]) if d.get("month_day") is not None else None)
+
+
+def _whole(value: Any, low: int, high: int, message: str) -> int:
+    if isinstance(value, bool) or not isinstance(value, int) or not low <= value <= high:
+        raise ValidationError(message)
+    return value
+
+
+def deadlines_input(payload: Mapping[str, Any]) -> tuple[Deadline, ...]:
+    """`deadlines` (a list); a request of before it existed sends one `deadline` day instead."""
+    items = payload.get("deadlines")
+    if items is None:
+        one = day(payload.get("deadline"), "Deadline", required=False)
+        return (Deadline(new_id(), "date", "", on=one),) if one else ()
+    if not isinstance(items, list):
+        raise ValidationError("Prazos: lista inválida")
+    if len(items) > MAX_DEADLINES:
+        raise ValidationError(f"Limite de {MAX_DEADLINES} prazos por projeto")
+    return tuple(Deadline.from_input(item) for item in items)
+
+
 # ------------------------------------------------------------------ project
 @dataclass(frozen=True)
 class Project:
@@ -226,7 +311,7 @@ class Project:
     company_id: str
     name: str
     currency: str = "BRL"
-    deadline: Optional[str] = None          # the day the project ends (informative)
+    deadlines: tuple[Deadline, ...] = ()    # the packages to deliver: on a day, weekly or monthly
     description: str = ""
     rules: tuple[Rule, ...] = ()
 
@@ -240,7 +325,7 @@ class Project:
         if currency not in CURRENCIES:
             raise ValidationError("Moeda inválida")
         return cls(id or new_id(), company_id, text(payload, "name", "Nome", max_length=120, required=True),
-                   currency, day(payload.get("deadline"), "Deadline", required=False),
+                   currency, deadlines_input(payload),
                    text(payload, "description", "Descrição", max_length=4000), rules)
 
     def rule_at(self, at: Optional[str]) -> Optional[Rule]:
@@ -251,14 +336,23 @@ class Project:
     def current_rule(self, now: str) -> Optional[Rule]:
         return self.rule_at(now)
 
+    def next_deadline(self, today: str) -> Optional[tuple[str, Deadline]]:
+        """The nearest deadline from `today`: (its day, the deadline)."""
+        coming = [(d.next_on(today), d) for d in self.deadlines]
+        coming = [(on, d) for on, d in coming if on]
+        return min(coming, key=lambda pair: pair[0]) if coming else None
+
     def to_dict(self) -> dict[str, Any]:
         return {"id": self.id, "company_id": self.company_id, "name": self.name, "currency": self.currency,
-                "deadline": self.deadline, "description": self.description,
+                "deadlines": [d.to_dict() for d in self.deadlines], "description": self.description,
                 "rules": [r.to_dict() for r in sorted(self.rules, key=lambda r: r.starts_at)]}
 
     @classmethod
     def from_dict(cls, d: Mapping[str, Any]) -> "Project":
-        return cls(d["id"], d["company_id"], d["name"], d.get("currency", "BRL"), d.get("deadline"),
+        deadlines = tuple(Deadline.from_dict(x) for x in d.get("deadlines") or ())
+        if not deadlines and d.get("deadline"):     # saved before a project had many deadlines
+            deadlines = (Deadline("deadline", "date", "", on=d["deadline"]),)
+        return cls(d["id"], d["company_id"], d["name"], d.get("currency", "BRL"), deadlines,
                    d.get("description", ""), tuple(Rule.from_dict(r) for r in d.get("rules", [])))
 
 

@@ -9,7 +9,7 @@ The texts used in the selectors ("Entrar", "Salvar", ...) are the app's labels, 
 import json
 import re
 import threading
-from datetime import date
+from datetime import date, timedelta
 
 from playwright.sync_api import expect, sync_playwright
 
@@ -89,12 +89,14 @@ def run():
     month = date.today().strftime("%Y-%m")
     with sync_playwright() as p:
         browser = p.chromium.launch()
-        page = browser.new_page(locale="pt-BR")             # the system's first language
+        page = browser.new_page(locale="pt-BR")             # a browser in Portuguese still opens in English
         cognito = FakeCognito()
         watch(page, errors)
         page.route("https://cognito-idp.sa-east-1.amazonaws.com/", cognito)
         page.goto(url_of(server))
 
+        expect(page.locator("h2")).to_have_text("Log in")                # English is the default
+        page.click(".login-languages >> text=Português (Brasil)")         # chosen on the login screen
         # sign up: a weak password, then a good one; the e-mailed code, first wrong, then right
         expect(page.locator("h2")).to_have_text("Entrar")
         page.click("text=Criar conta")
@@ -139,6 +141,8 @@ def run():
         page.click("#new-project")
         page.fill("#p-name", "Aplicativo")
         page.click("dialog label.choice:has-text('Valor fixo')")
+        expect(page.locator("#r-hourly")).to_be_hidden()                  # fixed value: no hourly fields
+        expect(page.locator("#r-flat")).to_be_hidden()
         page.fill("#r-fixed", "350")
         page.click("dialog >> text=Salvar")
         expect(page.locator("#company-projects [data-project]")).to_have_count(1)
@@ -154,8 +158,18 @@ def run():
         page.click("dialog >> text=+ Faixa de bônus")
         page.fill(".tier-row input[type=number]", "2")
         page.fill(".tier-row input[aria-label='Valor do bônus']", "50")
+        # two deadlines (packages): every Friday, and one on a day a month from now
+        page.click("#add-deadline")
+        page.fill(".deadline-row >> nth=0 >> input[aria-label='Nome do prazo']", "Pacote semanal")
+        page.click("#add-deadline")
+        row = page.locator(".deadline-row").nth(1)
+        row.locator("input[aria-label='Nome do prazo']").fill("Entrega final")
+        row.locator("select.deadline-kind").select_option("date")
+        expect(row.locator("select[aria-label='Dia da semana']")).to_be_hidden()
+        row.locator("input[type=date]").fill((date.today() + timedelta(days=30)).isoformat())
         page.click("dialog >> text=Salvar")
         expect(page.locator("#company-projects [data-project]")).to_have_count(2)   # one company, many projects
+        expect(page.locator("#company-projects [data-project='Portal'] .next-deadline")).to_contain_text("Pacote semanal")
         page.click("nav >> text=Empresas")
         expect(page.locator("[data-company='Etho']")).to_contain_text("2 projeto(s)")
         # the well-known companies: one tap adds one (with who runs it), and it leaves the list
@@ -163,16 +177,31 @@ def run():
         expect(page.locator("[data-company='Outlier']")).to_contain_text("Plataforma da Scale AI.")
         expect(page.locator("#known-companies [data-known='Outlier']")).to_have_count(0)
         expect(page.locator("#known-companies [data-known='Alignerr']")).to_be_visible()
+        page.click("[data-company='Outlier']")                            # the same for everyone: not edited
+        expect(page.locator("#company-known")).to_be_visible()
+        page.click("button.kebab[aria-label='Ações: Outlier']")
+        expect(page.locator(".menu-list:visible")).to_contain_text("Remover da minha lista")
+        expect(page.locator(".menu-list:visible")).not_to_contain_text("Editar empresa")
+        page.click("nav >> text=Empresas")
         page.click("#new-company")                                         # Nova empresa suggests them too
         page.fill("#c-name", "mindrift")
         expect(page.locator("#c-notes")).to_have_value("Plataforma da Toloka.")
+        expect(page.locator("#c-known-hint")).to_be_visible()               # it will be the shared one
         page.click("dialog >> text=Cancelar")
         page.click("nav >> text=Projetos")
+        page.select_option("#projects-company", "")                       # Outlier was the last one opened
         expect(page.locator("#project-list [data-project]")).to_have_count(2)
         page.click("[data-project='Portal']")
         expect(page.locator("h1")).to_have_text("Portal")
         expect(page.locator("#rules .rule.current")).to_contain_text("R$ 100,00/h")
         expect(page.locator("#rules .rule.current")).to_contain_text("2+ aprovadas = R$ 50,00")
+        expect(page.locator("#deadlines [data-deadline]")).to_have_count(2)
+        expect(page.locator("#deadlines")).to_contain_text("Toda semana, sexta-feira")
+        page.click("#edit-deadlines")                                     # in the project form: drop one
+        expect(page.locator(".deadline-row")).to_have_count(2)
+        page.locator(".deadline-row").nth(1).locator("button[aria-label='Remover prazo']").click()
+        page.click("dialog >> text=Salvar")
+        expect(page.locator("#deadlines [data-deadline]")).to_have_count(1)
 
         # tasks: one created already concluded, one open that takes time and is concluded on the list
         page.click("nav >> text=Tarefas")
@@ -268,6 +297,9 @@ def run_without_login():
         page = browser.new_page(viewport={"width": 390, "height": 800}, locale="pt-BR")   # a phone
         watch(page, errors)
         page.goto(url_of(server))
+        expect(page.locator("h1")).to_have_text("Tasks")                             # English by default
+        page.evaluate("localStorage.setItem('pulse.lang', 'pt-BR')")                 # as if chosen before
+        page.reload()
         expect(page.locator("h1")).to_have_text("Tarefas")
         expect(page.locator("[data-task]")).to_have_count(3)                          # the open demo tasks
         width = page.evaluate("document.documentElement.scrollWidth")

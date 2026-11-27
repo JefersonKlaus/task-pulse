@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import replace
 from typing import Any, Mapping
 
-from pulse_core.application import now, project_or_404, project_view
+from pulse_core.application import company, now, project_or_404, project_view
 from pulse_core.domain.errors import NotFound, ValidationError
 from pulse_core.domain.models import Rule
 from pulse_core.ports import Dependencies
@@ -33,4 +33,4 @@ def update_rule(deps: Dependencies, owner: str, project_id: str, rule_id: str,
             raise ValidationError("Já existe uma regra nesse intervalo: as regras não podem se sobrepor")
     project = replace(project, rules=tuple(others) + (rule,))
     deps.repo.save_project(owner, project)
-    return project_view(project, deps.repo.get_company(owner, project.company_id), now())
+    return project_view(project, company(deps, owner, project.company_id), now())

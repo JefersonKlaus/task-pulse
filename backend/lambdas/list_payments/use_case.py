@@ -4,12 +4,12 @@ from __future__ import annotations
 
 from typing import Any, Mapping
 
-from pulse_core.application import payment_view
+from pulse_core.application import companies as user_companies, payment_view
 from pulse_core.ports import Dependencies
 
 
 def list_payments(deps: Dependencies, owner: str, query: Mapping[str, str]) -> dict[str, Any]:
-    companies = {c.id: c for c in deps.repo.list_companies(owner)}
+    companies = {c.id: c for c in user_companies(deps, owner)}
     projects = {p.id: p for p in deps.repo.list_projects(owner)
                 if (not query.get("company_id") or p.company_id == query["company_id"])
                 and (not query.get("project_id") or p.id == query["project_id"])}

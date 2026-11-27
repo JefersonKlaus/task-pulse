@@ -119,6 +119,18 @@ h2 { font-size: 1.2rem; font-weight: 700; }
 .hint { margin-top: 0; }
 .notes { white-space: pre-line; }
 .notice { color: var(--muted); text-align: center; padding: 24px 0; }
+[hidden] { display: none !important; }            /* even on elements a class gives display: grid or flex */
+/* loading: a spinning ring and "Carregando…" while a screen's data comes; buttons show the ring while they wait */
+.loading { display: flex; align-items: center; justify-content: center; gap: 10px; padding: 40px 0;
+  color: var(--muted); font-weight: 500; }
+.spinner { width: 22px; height: 22px; flex-shrink: 0; border: 3px solid var(--border); border-top-color: var(--brand);
+  border-radius: 50%; animation: spin .8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+button[aria-busy="true"] { position: relative; color: transparent !important; }
+button[aria-busy="true"]::after { content: ""; position: absolute; inset: 0; margin: auto; width: 18px; height: 18px;
+  border: 2.5px solid currentColor; border-color: var(--on-brand) var(--on-brand) transparent transparent;
+  border-radius: 50%; animation: spin .8s linear infinite; }
+button.secondary[aria-busy="true"]::after { border-color: var(--brand) var(--brand) transparent transparent; }
 .notice-warn { margin: 8px 0; padding: 10px 12px; border-radius: 10px; background: var(--warn-light); color: var(--danger);
   font-size: .9rem; font-weight: 500; }
 label, .field-label { display: block; margin: 12px 0 6px; font-size: .85rem; font-weight: 600; color: var(--text); }
@@ -267,21 +279,28 @@ fieldset.choices legend { padding: 0; margin-bottom: 6px; font-size: .85rem; fon
 
 /* ------------------------------------------------------------------ dialogs and the "⋮" menu */
 /* A dialog is as tall as what it holds, never the whole screen: a short form stays short, a long one
-   (a pricing rule) grows up to the limit and scrolls inside, with its buttons always in view.
+   (a pricing rule) grows up to the limit and only its fields scroll, the title and the buttons stay in view.
+   The same inner margin on every side (20px on phones, 24px from 640px), buttons included.
    Phones: a sheet from the bottom, full width. 640px and up: a card in the middle, 420px to 560px wide. */
-dialog.dialog { width: 100vw; max-width: 100vw; height: fit-content; min-height: 0; max-height: 90dvh;
-  margin: auto 0 0; padding: 20px 16px 0; border: 0; border-radius: 20px 20px 0 0; overflow-y: auto;
-  color: var(--text); background: var(--surface); box-shadow: 0 -8px 32px rgba(0, 0, 0, .2); }
+dialog.dialog { --pad: 20px; width: 100vw; max-width: 100vw; height: fit-content; min-height: 0; max-height: 90dvh;
+  margin: auto 0 0; padding: var(--pad) var(--pad) calc(var(--pad) + env(safe-area-inset-bottom)); border: 0;
+  border-radius: 20px 20px 0 0; overflow: hidden; color: var(--text); background: var(--surface);
+  box-shadow: 0 -8px 32px rgba(0, 0, 0, .2); }
+dialog.dialog[open] { display: flex; flex-direction: column; }
 dialog.dialog::backdrop { background: rgba(0, 0, 0, .45); }
-dialog.dialog h2 { font-size: 1.35rem; }
-dialog.dialog > form > .actions:last-child { position: sticky; bottom: 0; z-index: 1; margin: 16px -16px 0;
-  padding: 12px 16px calc(12px + env(safe-area-inset-bottom)); background: var(--surface); border-top: 1px solid var(--border); }
+dialog.dialog h2 { flex-shrink: 0; margin-top: 0; font-size: 1.35rem; }
+dialog.dialog > form { display: flex; flex-direction: column; min-height: 0; }
+/* the fields scroll; the 6px around them leave room for the focus ring, which overflow would cut */
+dialog.dialog .dialog-body { min-height: 0; overflow-y: auto; margin: -6px; padding: 6px; }
+dialog.dialog .dialog-body > :first-child { margin-top: 0; }
+dialog.dialog > form > .actions:last-child { flex-shrink: 0; margin: 16px 0 0; padding: 16px 0 0;
+  border-top: 1px solid var(--border); }
 dialog.dialog > form > .actions:last-child button { flex: 1; }
+dialog.dialog > .actions { margin-bottom: 0; }
 @media (min-width: 640px) {
-  dialog.dialog { width: fit-content; min-width: min(420px, calc(100vw - 32px)); max-width: min(560px, calc(100vw - 32px));
-    max-height: calc(100dvh - 48px); margin: auto; padding: 24px 24px 0; border-radius: 20px;
+  dialog.dialog { --pad: 24px; width: fit-content; min-width: min(420px, calc(100vw - 32px));
+    max-width: min(560px, calc(100vw - 32px)); max-height: calc(100dvh - 48px); margin: auto; border-radius: 20px;
     box-shadow: 0 16px 48px rgba(0, 0, 0, .3); }
-  dialog.dialog > form > .actions:last-child { margin: 16px -24px 0; padding: 14px 24px; }
   dialog.dialog > form > .actions:last-child button { flex: 0 0 auto; }
 }
 .menu { position: relative; flex-shrink: 0; margin: -8px -8px 0 0; }
@@ -352,6 +371,25 @@ dialog.dialog > form > .actions:last-child button { flex: 1; }
 .rule .badge + .muted, .rule strong + .muted { margin-top: 4px; }
 .form-section { margin-top: 20px; }
 .tier-row { display: grid; grid-template-columns: 1fr 1fr auto; gap: 8px; margin-bottom: 8px; }
-@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+/* deadlines: in the project form a row is name, how it repeats, its day and ×; on phones the name takes a line */
+.deadline-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto; gap: 8px; margin-bottom: 8px; }
+.deadline-row > input:first-child { grid-column: 1 / -1; }
+.deadline-row > :not([hidden]):nth-last-child(2) { grid-column: 2; }
+@media (min-width: 640px) {
+  .deadline-row { grid-template-columns: minmax(0, 1.2fr) minmax(0, 1.1fr) minmax(0, 1fr) auto; }
+  .deadline-row > input:first-child { grid-column: auto; }
+  .deadline-row > :not([hidden]):nth-last-child(2) { grid-column: auto; }
+}
+.deadline-list { list-style: none; margin: 0; padding: 0; }
+.deadline { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 0;
+  border-top: 1px solid var(--border); }
+.deadline:first-child { border-top: 0; }
+.deadline-next { flex-shrink: 0; font-weight: 600; font-variant-numeric: tabular-nums; }
+.deadline.past { opacity: .6; }
+.deadline.past .deadline-next { font-weight: 500; color: var(--muted); }
+.badge.KNOWN { color: var(--brand-dark); background: var(--brand-light); }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; }
+  .spinner, button[aria-busy="true"]::after { animation-duration: 2.4s; } }
 
 .one-line { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#company-known .badge { margin: 0 4px 0 0; }

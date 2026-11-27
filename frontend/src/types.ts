@@ -11,7 +11,18 @@ export const STATUS_LABELS: Record<Status, string> = {
   DOING: N_("Fazendo"), DONE: N_("Concluída"), APPROVED: N_("Aprovada"), REJECTED: N_("Rejeitada"),
 };
 
-export interface Company { id: string; name: string; notes: string; projects?: number; open_tasks?: number }
+/** `known`: a well-known company, the same for everyone (backend domain/catalog.py); nobody edits it. */
+export interface Company {
+  id: string; name: string; notes: string; known?: boolean; projects?: number; open_tasks?: number;
+}
+
+/** A deadline (a package to deliver): on one day, every week on a weekday (1 = Monday ... 7 = Sunday) or every
+ * month on a day (1-31). `next_on`: its next day from today; null for a day that has passed. */
+export type DeadlineKind = "date" | "weekly" | "monthly";
+export interface Deadline {
+  id: string; kind: DeadlineKind; label: string;
+  on: string | null; weekday: number | null; month_day: number | null; next_on?: string | null;
+}
 
 export interface BonusTier { min_tasks: number; bonus_cents: number }
 
@@ -33,7 +44,9 @@ export interface Project {
   company_name: string;
   name: string;
   currency: string;
-  deadline: string | null;
+  company_known?: boolean;
+  deadlines: Deadline[];
+  next_deadline: Deadline | null;
   description: string;
   rules: Rule[];
   current_rule_id: string | null;
